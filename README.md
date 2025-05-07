@@ -1,0 +1,1 @@
+# Nuova-Risorsa-Esterna-Somministrato
