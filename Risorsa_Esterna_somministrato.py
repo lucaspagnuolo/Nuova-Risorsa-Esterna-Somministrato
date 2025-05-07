@@ -7,27 +7,32 @@ import io
 # ------------------------------------------------------------
 # Caricamento configurazione da Excel caricato dall'utente
 # ------------------------------------------------------------
+
 def load_config_from_bytes(data: bytes):
     cfg = pd.read_excel(io.BytesIO(data), sheet_name=None)
-    ou_df = cfg.get("OU", pd.DataFrame(columns=["key", "label"]))
-    ou_options = dict(zip(ou_df["key"], ou_df["label"]))
     grp_df = cfg.get("InserimentoGruppi", pd.DataFrame(columns=["app", "gruppi"]))
     gruppi = dict(zip(grp_df["app"], grp_df["gruppi"]))
     def_df = cfg.get("Defaults", pd.DataFrame(columns=["key", "value"]))
     defaults = dict(zip(def_df["key"], def_df["value"]))
-    return ou_options, gruppi, defaults
+    return gruppi, defaults
 
-# Uploader per config
+# ------------------------------------------------------------
+# App 1.2: Risorsa Esterna - Somministrato/Stage
+# ------------------------------------------------------------
+st.set_page_config(page_title="1.2 Risorsa Esterna: Somministrato/Stage")
 st.title("1.2 Risorsa Esterna: Somministrato/Stage")
+
+# Caricamento configurazione
 config_file = st.file_uploader(
     "Carica config.xlsx",
-    type=["xlsx"], help="File con fogli OU, InserimentoGruppi e Defaults"
+    type=["xlsx"],
+    help="File con foglio InserimentoGruppi e Defaults"
 )
 if not config_file:
     st.warning("Carica il file di configurazione per procedere.")
     st.stop()
 
-ou_options, gruppi, defaults = load_config_from_bytes(config_file.read())
+gruppi, defaults = load_config_from_bytes(config_file.read())
 
 # Utility
 
@@ -42,7 +47,9 @@ def formatta_data(data: str) -> str:
     return data
 
 
-def genera_samaccountname(nome: str, cognome: str, secondo_nome: str = "", secondo_cognome: str = "", esterno: bool = False) -> str:
+def genera_samaccountname(nome: str, cognome: str,
+                           secondo_nome: str = "", secondo_cognome: str = "",
+                           esterno: bool = False) -> str:
     n, sn = nome.strip().lower(), secondo_nome.strip().lower()
     c, sc = cognome.strip().lower(), secondo_cognome.strip().lower()
     suffix = ".ext" if esterno else ""
@@ -54,7 +61,9 @@ def genera_samaccountname(nome: str, cognome: str, secondo_nome: str = "", secon
     return (f"{n[:1]}{sn[:1]}.{c}")[:limit] + suffix
 
 
-def build_full_name(cognome: str, secondo_cognome: str, nome: str, secondo_nome: str, esterno: bool = False) -> str:
+def build_full_name(cognome: str, secondo_cognome: str,
+                    nome: str, secondo_nome: str,
+                    esterno: bool = False) -> str:
     parts = [p for p in [cognome, secondo_cognome, nome, secondo_nome] if p]
     full = " ".join(parts)
     return full + (" (esterno)" if esterno else "")
@@ -66,7 +75,7 @@ HEADER = [
     "disable", "moveToOU", "telephoneNumber", "company"
 ]
 
-# Sezione 1.2
+# Form di input
 nome            = st.text_input("Nome").strip().capitalize()
 secondo_nome    = st.text_input("Secondo Nome").strip().capitalize()
 cognome         = st.text_input("Cognome").strip().capitalize()
@@ -74,47 +83,37 @@ secondo_cognome = st.text_input("Secondo Cognome").strip().capitalize()
 numero_telefono = st.text_input("Numero di Telefono", "").replace(" ", "")
 description     = st.text_input("Description (lascia vuoto per <PC>)", "<PC>").strip()
 codice_fiscale  = st.text_input("Codice Fiscale", "").strip()
+expire_date     = st.text_input("Data di Fine (gg-mm-aaaa)", defaults.get("expire_default", "30-06-2025")).strip()
+department      = st.text_input("Dipartimento", defaults.get("department_default", "")).strip()
 
 # Valori fissi da config
-ou_value         = ou_options.get("esterna_stage", defaults.get("ou_default", "Utenti esterni - Somministrati e Stage"))
-expire_default   = defaults.get("expire_default", "30-06-2025")
+ou_value          = defaults.get("ou_esterna_stage", "Utenti esterni - Somministrati e Stage")
 employee_id      = defaults.get("employee_id_default", "")
-department       = st.text_input("Dipartimento", defaults.get("department_default", "")).strip()
 inserimento_gruppo = gruppi.get("esterna_stage", "")
-telephone_number = defaults.get("telephone_default", "")
-company          = defaults.get("company_default", "")
+telephone_number = defaults.get("telephone_interna", "")
+company          = defaults.get("company_interna", "")
 
-# Email flag input
-email_flag = st.radio("Email necessaria?", ["Sì", "No"]) == "Sì"
-if email_flag:
-    try:
-        custom_email = f"{cognome.lower()}{nome[0].lower()}@consip.it"
-    except:
-        st.error("Inserisci Nome e Cognome per email automatica.")
-        custom_email = ""
-else:
-    custom_email = None
+if st.button("Genera CSV"):
+    # Costruzione attributi
+    sAM       = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
+    cn        = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
+    name_val  = cn  # ora Name = DisplayName
+    display   = cn
+    given     = " ".join([nome, secondo_nome]).strip()
+    surn      = " ".join([cognome, secondo_cognome]).strip()
+    exp_fmt   = formatta_data(expire_date)
+    upn_mail  = f"{sAM}@consip.it"
+    mobile    = f"+39 {numero_telefono}" if numero_telefono else ""
 
-# Impostazione della data di scadenza
-expire_date = st.text_input("Data di Fine (gg-mm-aaaa)", expire_default).strip()
-
-if st.button("Genera CSV Esterna Stage"):
-    sAM = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
-    cn  = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
-    exp = formatta_data(expire_date)
-    mail = custom_email if custom_email else f"{sAM}@consip.it"
-
+    # Riga CSV
     row = [
-        sAM, "SI", ou_value, cn.replace(" (esterno)", ""), cn, cn,
-        " ".join([nome, secondo_nome]).strip(),
-        " ".join([cognome, secondo_cognome]).strip(),
-        codice_fiscale, employee_id, department,
-        description or "<PC>", "No", exp,
-        f"{sAM}@consip.it", mail,
-        f"+39 {numero_telefono}" if numero_telefono else "",
-        "", inserimento_gruppo, "", "",
+        sAM, "SI", ou_value, name_val, display, cn, given, surn,
+        codice_fiscale, employee_id, department, description or "<PC>", "No", exp_fmt,
+        upn_mail, upn_mail, mobile, "", inserimento_gruppo, "", "",
         telephone_number, company
     ]
+
+    # Output
     buf = io.StringIO()
     writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
     writer.writerow(HEADER)
@@ -123,8 +122,8 @@ if st.button("Genera CSV Esterna Stage"):
 
     st.dataframe(pd.DataFrame([row], columns=HEADER))
     st.download_button(
-        "📥 Scarica CSV",
-        buf.getvalue(),
+        label="📥 Scarica CSV",
+        data=buf.getvalue(),
         file_name=f"{cognome}_{nome[:1]}_stage.csv",
         mime="text/csv"
     )
