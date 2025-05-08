@@ -9,15 +9,7 @@ import io
 # ------------------------------------------------------------
 def load_config_from_bytes(data: bytes):
     cfg = pd.read_excel(io.BytesIO(data), sheet_name="Somministrato")
-    # Sezione OU
-    ou_df = (
-        cfg[cfg["Section"] == "OU"]
-        [["Key/App", "Label/Gruppi/Value"]]
-        .rename(columns={"Key/App": "key", "Label/Gruppi/Value": "label"})
-    )
-    ou_options = dict(zip(ou_df["key"], ou_df["label"]))
-
-    # Sezione InserimentoGruppi
+    # InserimentoGruppi
     grp_df = (
         cfg[cfg["Section"] == "InserimentoGruppi"]
         [["Key/App", "Label/Gruppi/Value"]]
@@ -25,7 +17,7 @@ def load_config_from_bytes(data: bytes):
     )
     gruppi = dict(zip(grp_df["app"], grp_df["gruppi"]))
 
-    # Sezione Defaults
+    # Defaults
     def_df = (
         cfg[cfg["Section"] == "Defaults"]
         [["Key/App", "Label/Gruppi/Value"]]
@@ -33,7 +25,7 @@ def load_config_from_bytes(data: bytes):
     )
     defaults = dict(zip(def_df["key"], def_df["value"]))
 
-    return ou_options, gruppi, defaults
+    return gruppi, defaults
 
 # ------------------------------------------------------------
 # App 1.2: Risorsa Esterna - Somministrato/Stage
@@ -44,23 +36,18 @@ st.title("1.2 Risorsa Esterna: Somministrato/Stage")
 config_file = st.file_uploader(
     "Carica il file di configurazione (config_corrected.xlsx)",
     type=["xlsx"],
-    help="Deve contenere il foglio “Somministrato” con colonna Section"
+    help="Deve contenere il foglio “Somministrato” con colonne Section, Key/App, Label/Gruppi/Value"
 )
 if not config_file:
     st.warning("Per favore carica il file di configurazione per continuare.")
     st.stop()
 
-ou_options, gruppi, defaults = load_config_from_bytes(config_file.read())
+gruppi, defaults = load_config_from_bytes(config_file.read())
 
 # ------------------------------------------------------------
-# Determinazione del valore di OU da defaults → ou_esterna_stage
+# Determinazione del valore di OU dal default
 # ------------------------------------------------------------
-ou_key_default = defaults.get("ou_esterna_stage", None)
-if ou_key_default and ou_key_default in ou_options:
-    ou_value = ou_options[ou_key_default]
-else:
-    # fallback al primo valore disponibile
-    ou_value = next(iter(ou_options.values())) if ou_options else ""
+ou_value = defaults.get("ou_default", "")
 
 # ------------------------------------------------------------
 # Utility functions
@@ -113,7 +100,7 @@ nome             = st.text_input("Nome").strip().capitalize()
 secondo_nome     = st.text_input("Secondo Nome").strip().capitalize()
 codice_fiscale   = st.text_input("Codice Fiscale", "").strip()
 department       = st.text_input("Sigla Divisione-Area", defaults.get("department_default", "")).strip()
-numero_telefono  = st.text_input("Mobile", "").replace(" ", "")
+numero_telefon o = st.text_input("Mobile", "").replace(" ", "")
 description      = st.text_input("PC", "<PC>").strip()
 expire_date      = st.text_input("Data di Fine (gg-mm-aaaa)", defaults.get("expire_default", "30-06-2025")).strip()
 
@@ -133,7 +120,7 @@ if st.button("Genera CSV Somministrato"):
     cn      = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
     exp_fmt = formatta_data(expire_date)
     upn     = f"{sAM}@consip.it"
-    mobile  = f"+39 {numero_telefono}" if numero_telefon o else ""
+    mobile  = f"+39 {numero_telefono}" if numero_telefono else ""
     name    = cn
     display = cn
     given   = f"{nome} {secondo_nome}".strip()
