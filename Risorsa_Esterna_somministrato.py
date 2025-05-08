@@ -100,7 +100,7 @@ nome             = st.text_input("Nome").strip().capitalize()
 secondo_nome     = st.text_input("Secondo Nome").strip().capitalize()
 codice_fiscale   = st.text_input("Codice Fiscale", "").strip()
 department       = st.text_input("Sigla Divisione-Area", defaults.get("department_default", "")).strip()
-numero_telefon o = st.text_input("Mobile", "").replace(" ", "")
+numero_telefono = st.text_input("Mobile", "").replace(" ", "")
 description      = st.text_input("PC", "<PC>").strip()
 expire_date      = st.text_input("Data di Fine (gg-mm-aaaa)", defaults.get("expire_default", "30-06-2025")).strip()
 
