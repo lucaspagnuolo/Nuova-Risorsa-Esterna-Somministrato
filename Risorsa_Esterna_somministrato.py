@@ -144,4 +144,34 @@ if st.button("Genera CSV Somministrato"):
         "sAMAccountName": sAM,
         "Creation": "SI",
         **row_values_to_quote_formatted,
-        "employeeNumber": codice
+        "employeeNumber": codice_fiscale,
+        "employeeID": employee_id,
+        "department": department,
+        "Description": description or "",
+        "passwordNeverExpired": "No",
+        "userprincipalname": upn,
+        "mail": upn,
+        "RimozioneGruppo": "",
+        "InserimentoGruppo": inserimento_gruppo,
+        "disable": "",
+        "moveToOU": "",
+        "telephoneNumber": telephone_number,
+        "company": company
+    }
+
+    row = [row_values_dict.get(col, "") for col in HEADER]
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(HEADER)
+    writer.writerow(row)
+    buf.seek(0)
+
+    st.dataframe(pd.DataFrame([row], columns=HEADER))
+    st.download_button(
+        label="📥 Scarica CSV Somministrato",
+        data=buf.getvalue(),
+        file_name=f"{cognome}_{nome[:1]}_stage.csv",
+        mime="text/csv"
+    )
+    st.success(f"✅ File CSV generato per '{sAM}'")
