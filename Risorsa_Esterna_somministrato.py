@@ -8,7 +8,7 @@ import io
 # Caricamento configurazione da Excel caricato dall'utente
 # ------------------------------------------------------------
 def load_config_from_bytes(data: bytes):
-    cfg = pd.read_excel(io.BytesIO(data), sheet_name="Somministrato", engine='openpyxl')
+    cfg = pd.read_excel(io.BytesIO(data), sheet_name="Somministrato")
     # InserimentoGruppi
     grp_df = (
         cfg[cfg["Section"] == "InserimentoGruppi"]
@@ -136,7 +136,6 @@ if st.button("Genera CSV Somministrato"):
         "Surname": surn if secondo_cognome else cognome,
         "ExpireDate": exp_fmt,
         "mobile": mobile,
-        "telephoneNumber": telephone_number,
     }
 
     row_values_to_quote_formatted = {k: f'\\\"{v}\\\"' for k,v in row_values_to_quote.items()}
@@ -145,33 +144,4 @@ if st.button("Genera CSV Somministrato"):
         "sAMAccountName": sAM,
         "Creation": "SI",
         **row_values_to_quote_formatted,
-        "employeeNumber": codice_fiscale,
-        "employeeID": employee_id,
-        "department": department,
-        "Description": description or "",
-        "passwordNeverExpired": "No",
-        "userprincipalname": upn,
-        "mail": upn,
-        "RimozioneGruppo": "",
-        "InserimentoGruppo": inserimento_gruppo,
-        "disable": "",
-        "moveToOU": "",
-        "company": company
-    }
-
-    row = [row_values_dict.get(col, "") for col in HEADER]
-
-    buf = io.StringIO()
-    writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
-    writer.writerow(HEADER)
-    writer.writerow(row)
-    buf.seek(0)
-
-    st.dataframe(pd.DataFrame([row], columns=HEADER))
-    st.download_button(
-        label="📥 Scarica CSV Somministrato",
-        data=buf.getvalue(),
-        file_name=f"{cognome}_{nome[:1]}_stage.csv",
-        mime="text/csv"
-    )
-    st.success(f"✅ File CSV generato per '{sAM}'")
+        "employeeNumber": codice
