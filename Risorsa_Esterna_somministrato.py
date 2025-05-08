@@ -130,4 +130,21 @@ if st.button("Genera CSV Somministrato"):
     row = [
         sAM, "SI", ou_value, name, display, cn, given, surn,
         codice_fiscale, employee_id, department, description or "", "No", exp_fmt,
-        upn, up
+        upn, upn, mobile, "", inserimento_gruppo, "", "",
+        telephone_number, company
+    ]
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(HEADER)
+    writer.writerow(row)
+    buf.seek(0)
+
+    st.dataframe(pd.DataFrame([row], columns=HEADER))
+    st.download_button(
+        label="📥 Scarica CSV Somministrato",
+        data=buf.getvalue(),
+        file_name=f"{cognome}_{nome[:1]}_stage.csv",
+        mime="text/csv"
+    )
+    st.success(f"✅ File CSV generato per '{sAM}'")
