@@ -84,6 +84,9 @@ def build_full_name(cognome: str, secondo_cognome: str,
     full  = " ".join(parts)
     return full + (" (esterno)" if esterno else "")
 
+def add_quotes(value: str) -> str:
+    return f'\"{value}\"' if value else value
+
 HEADER = [
     "sAMAccountName","Creation","OU","Name","DisplayName","cn","GivenName","Surname",
     "employeeNumber","employeeID","department","Description","passwordNeverExpired",
@@ -100,7 +103,7 @@ nome             = st.text_input("Nome").strip().capitalize()
 secondo_nome     = st.text_input("Secondo Nome").strip().capitalize()
 codice_fiscale   = st.text_input("Codice Fiscale", "").strip()
 department       = st.text_input("Sigla Divisione-Area", defaults.get("department_default", "")).strip()
-numero_telefono = st.text_input("Mobile", "").replace(" ", "")
+numero_telefono  = st.text_input("Mobile", "").replace(" ", "")
 description      = st.text_input("PC", "<PC>").strip()
 expire_date      = st.text_input("Data di Fine (gg-mm-aaaa)", defaults.get("expire_default", "30-06-2025")).strip()
 
@@ -126,11 +129,22 @@ if st.button("Genera CSV Somministrato"):
     given   = f"{nome} {secondo_nome}".strip()
     surn    = f"{cognome} {secondo_cognome}".strip()
 
+    # Applichiamo i doppi apici solo ai campi richiesti
+    quoted_cn       = add_quotes(cn)
+    quoted_name     = add_quotes(name)
+    quoted_display  = add_quotes(display)
+    quoted_exp_date = add_quotes(exp_fmt)
+    quoted_mobile   = add_quotes(mobile)
+    quoted_ou       = add_quotes(ou_value)
+    quoted_tel      = add_quotes(telephone_number)
+    quoted_given    = add_quotes(given) if secondo_nome else given
+    quoted_surn     = add_quotes(surn) if secondo_cognome else surn
+
     row = [
-        sAM, "SI", ou_value, name, display, cn, given, surn,
-        codice_fiscale, employee_id, department, description or "<PC>", "No", exp_fmt,
-        upn, upn, mobile, "", inserimento_gruppo, "", "",
-        telephone_number, company
+        sAM, "SI", quoted_ou, quoted_name, quoted_display, quoted_cn, quoted_given, quoted_surn,
+        codice_fiscale, employee_id, department, description or "<PC>", "No", quoted_exp_date,
+        upn, upn, quoted_mobile, "", inserimento_gruppo, "", "",
+        quoted_tel, company
     ]
 
     buf = io.StringIO()
