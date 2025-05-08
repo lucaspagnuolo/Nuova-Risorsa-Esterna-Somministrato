@@ -10,17 +10,24 @@ import io
 def load_config_from_bytes(data: bytes):
     # Legge solo il foglio “Somministrato”
     cfg = pd.read_excel(io.BytesIO(data), sheet_name="Somministrato")
-    # Separa le sezioni
-    ou_df  = cfg[cfg["Section"] == "OU"][["Key/App", "Label/Gruppi/Value"]].rename(
-                 columns={"Key/App": "key", "Label/Gruppi/Value": "label"})
-    grp_df = cfg[cfg["Section"] == "InserimentoGruppi"][["Key/App", "Label/Gruppi/Value"]].rename(
-                 columns={"Key/App": "app", "Label/Gruppi/Value": "gruppi"})
-    def_df = cfg[cfg["Section"] == "Defaults"][["Key/App", "Label/Gruppi/Value"]].rename(
-                 columns={"Key/App": "key", "Label/Gruppi/Value": "value"})
-
+    # Sezione OU (opzionale, se servisse)
+    ou_df = cfg[cfg["Section"] == "OU"][["Key/App", "Label/Gruppi/Value"]].rename(
+        columns={"Key/App": "key", "Label/Gruppi/Value": "label"}
+    )
     ou_options = dict(zip(ou_df["key"], ou_df["label"]))
-    gruppi     = dict(zip(grp_df["app"], grp_df["gruppi"]))
-    defaults   = dict(zip(def_df["key"], def_df["value"]))
+
+    # Sezione InserimentoGruppi
+    grp_df = cfg[cfg["Section"] == "InserimentoGruppi"][["Key/App", "Label/Gruppi/Value"]].rename(
+        columns={"Key/App": "app", "Label/Gruppi/Value": "gruppi"}
+    )
+    gruppi = dict(zip(grp_df["app"], grp_df["gruppi"]))
+
+    # Sezione Defaults
+    def_df = cfg[cfg["Section"] == "Defaults"][["Key/App", "Label/Gruppi/Value"]].rename(
+        columns={"Key/App": "key", "Label/Gruppi/Value": "value"}
+    )
+    defaults = dict(zip(def_df["key"], def_df["value"]))
+
     return ou_options, gruppi, defaults
 
 # ------------------------------------------------------------
@@ -107,7 +114,7 @@ company            = defaults.get("company_interna", "")
 # ------------------------------------------------------------
 # Bottone di generazione CSV
 # ------------------------------------------------------------
-if st.button("Genera CSV"):
+if st.button("Genera CSV Somministrato"):
     sAM     = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
     cn      = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
     exp_fmt = formatta_data(expire_date)
