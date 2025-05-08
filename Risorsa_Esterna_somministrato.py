@@ -75,29 +75,35 @@ HEADER = [
     "disable", "moveToOU", "telephoneNumber", "company"
 ]
 
-# Form di input
-nome            = st.text_input("Nome").strip().capitalize()
-secondo_nome    = st.text_input("Secondo Nome").strip().capitalize()
+# -----------------------------
+# Form di input aggiornato
+# -----------------------------
 cognome         = st.text_input("Cognome").strip().capitalize()
 secondo_cognome = st.text_input("Secondo Cognome").strip().capitalize()
-numero_telefono = st.text_input("Numero di Telefono", "").replace(" ", "")
-description     = st.text_input("Description (lascia vuoto per <PC>)", "<PC>").strip()
+nome            = st.text_input("Nome").strip().capitalize()
+secondo_nome    = st.text_input("Secondo Nome").strip().capitalize()
 codice_fiscale  = st.text_input("Codice Fiscale", "").strip()
+department      = st.text_input("Sigla Divisione-Area", defaults.get("department_default", "")).strip()
+numero_telefono = st.text_input("Mobile", "").replace(" ", "")
+description     = st.text_input("PC", "<PC>").strip()
 expire_date     = st.text_input("Data di Fine (gg-mm-aaaa)", defaults.get("expire_default", "30-06-2025")).strip()
-department      = st.text_input("Dipartimento", defaults.get("department_default", "")).strip()
 
+# -----------------------------
 # Valori fissi da config
+# -----------------------------
 ou_value          = defaults.get("ou_esterna_stage", "Utenti esterni - Somministrati e Stage")
-employee_id      = defaults.get("employee_id_default", "")
+employee_id       = defaults.get("employee_id_default", "")
 inserimento_gruppo = gruppi.get("esterna_stage", "")
-telephone_number = defaults.get("telephone_interna", "")
-company          = defaults.get("company_interna", "")
+telephone_number  = defaults.get("telephone_interna", "")
+company           = defaults.get("company_interna", "")
 
+# -----------------------------
+# Bottone Genera CSV
+# -----------------------------
 if st.button("Genera CSV"):
-    # Costruzione attributi
     sAM       = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
     cn        = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
-    name_val  = cn  # ora Name = DisplayName
+    name_val  = cn
     display   = cn
     given     = " ".join([nome, secondo_nome]).strip()
     surn      = " ".join([cognome, secondo_cognome]).strip()
@@ -105,7 +111,6 @@ if st.button("Genera CSV"):
     upn_mail  = f"{sAM}@consip.it"
     mobile    = f"+39 {numero_telefono}" if numero_telefono else ""
 
-    # Riga CSV
     row = [
         sAM, "SI", ou_value, name_val, display, cn, given, surn,
         codice_fiscale, employee_id, department, description or "<PC>", "No", exp_fmt,
@@ -113,7 +118,6 @@ if st.button("Genera CSV"):
         telephone_number, company
     ]
 
-    # Output
     buf = io.StringIO()
     writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
     writer.writerow(HEADER)
