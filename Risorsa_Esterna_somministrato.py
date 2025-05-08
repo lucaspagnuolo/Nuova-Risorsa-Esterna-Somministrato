@@ -100,66 +100,62 @@ nome             = st.text_input("Nome").strip().capitalize()
 secondo_nome     = st.text_input("Secondo Nome").strip().capitalize()
 codice_fiscale   = st.text_input("Codice Fiscale", "").strip()
 department       = st.text_input("Sigla Divisione-Area", defaults.get("department_default", "")).strip()
-numero_telefono = st.text_input("Mobile", "").replace(" ", "")
+numero_telefono  = st.text_input("Mobile", "").replace(" ", "")
 description      = st.text_input("PC", "<PC>").strip()
-expire_date      = st.text_input("Data di Fine (gg-mm-aaaa)", defaults.get("expire_default", "30-06-2025")).strip()
+expire_date      = st.text_input("Data di Scadenza Contratto", "").strip()
 
 # ------------------------------------------------------------
-# Valori fissi prelevati dalla configurazione
+# Generazione CSV
 # ------------------------------------------------------------
-employee_id        = defaults.get("employee_id_default", "")
-inserimento_gruppo = gruppi.get("esterna_stage", "")
-telephone_number   = defaults.get("telephone_interna", "")
-company            = defaults.get("company_interna", "")
+if st.button("Genera CSV Esterna"):
+    sAM = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
+    cn  = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
+    given = f"{nome} {secondo_nome}".strip()
+    surn  = f"{cognome} {secondo_cognome}".strip()
+    mobile = f"+39 {numero_telefono}" if numero_telefono else ""
+    telnum = defaults.get("telephone_esterna", "")
 
-# ------------------------------------------------------------
-# Funzione per aggiungere i doppi apici con il backslash
-# ------------------------------------------------------------
-def escape_field(val):
-    return f'\\"{val}\\"'
-
-# ------------------------------------------------------------
-# Bottone di generazione CSV
-# ------------------------------------------------------------
-if st.button("Genera CSV Somministrato"):
-    sAM     = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
-    cn      = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
-    exp_fmt = formatta_data(expire_date)
-    upn     = f"{sAM}@consip.it"
-    mobile  = f"+39 {numero_telefono}" if numero_telefono else ""
-    name    = cn
-    display = cn
-    given   = f"{nome} {secondo_nome}".strip()
-    surn    = f"{cognome} {secondo_cognome}".strip()
-
-    # Creazione della riga con i valori da scrivere nel CSV
     row = [
-        sAM, "SI", ou_value, name, display, cn, given, surn,
-        codice_fiscale, employee_id, department, description or "<PC>", "No", exp_fmt,
-        upn, upn, mobile, "", inserimento_gruppo, "", "",
-        telephone_number, company
+        sAM, "SI", ou_value,                      # index 0,1,2
+        cn.replace(" (esterno)", ""),             # 3 → Name
+        cn,                                       # 4 → DisplayName
+        cn,                                       # 5 → cn
+        given,                                    # 6 → GivenName
+        surn,                                     # 7 → Surname
+        codice_fiscale, "", department,           # 8,9,10
+        description or "<PC>", "No", "",          # 11,12,13
+        f"{sAM}@consip.it", f"{sAM}@consip.it",  # 14,15
+        mobile,                                  # 16 → mobile
+        "", gruppi.get("somministrato", ""), "", "",  # 17,18,19,20
+        telnum,                                  # 21 → telephoneNumber
+        defaults.get("company_esterna", "")       # 22
     ]
 
-    # Applica la funzione per aggiungere i doppi apici con il backslash
-    escaped_row = [escape_field(v) for v in row]
-    escaped_header = [escape_field(h) for h in HEADER]
+    # Avvolgi tra virgolette i campi richiesti
+    # OU (idx 2), Name (3), DisplayName (4), cn (5)
+    for i in (2, 3, 4, 5):
+        row[i] = f"\"{row[i]}\""
+    # GivenName (6) solo se secondo_nome non vuoto
+    if secondo_nome:
+        row[6] = f"\"{row[6]}\""
+    # Surname (7) solo se secondo_cognome non vuoto
+    if secondo_cognome:
+        row[7] = f"\"{row[7]}\""
+    # mobile (16) e telephoneNumber (21)
+    for i in (16, 21):
+        row[i] = f"\"{row[i]}\""
 
-    # Scrittura su buffer CSV
     buf = io.StringIO()
-    writer = csv.writer(buf, quoting=csv.QUOTE_NONE, escapechar='\\')
-    writer.writerow(escaped_header)
-    writer.writerow(escaped_row)
+    writer = csv.writer(buf, quoting=csv.QUOTE_NONE, escapechar="\\")
+    writer.writerow(HEADER)
+    writer.writerow(row)
     buf.seek(0)
 
-    # Mostra anteprima come tabella
     st.dataframe(pd.DataFrame([row], columns=HEADER))
-
-    # Pulsante per scaricare il file
     st.download_button(
-        label="📥 Scarica CSV Somministrato",
+        label="📥 Scarica CSV",
         data=buf.getvalue(),
-        file_name=f"{cognome}_{nome[:1]}_stage.csv",
+        file_name=f"{cognome}_{nome[:1]}_esterna.csv",
         mime="text/csv"
     )
-
     st.success(f"✅ File CSV generato per '{sAM}'")
