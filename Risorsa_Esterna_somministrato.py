@@ -8,23 +8,28 @@ import io
 # Caricamento configurazione da Excel caricato dall'utente
 # ------------------------------------------------------------
 def load_config_from_bytes(data: bytes):
-    # Legge solo il foglio “Somministrato”
     cfg = pd.read_excel(io.BytesIO(data), sheet_name="Somministrato")
-    # Sezione OU (opzionale, se servisse)
-    ou_df = cfg[cfg["Section"] == "OU"][["Key/App", "Label/Gruppi/Value"]].rename(
-        columns={"Key/App": "key", "Label/Gruppi/Value": "label"}
+    # Sezione OU
+    ou_df = (
+        cfg[cfg["Section"] == "OU"]
+        [["Key/App", "Label/Gruppi/Value"]]
+        .rename(columns={"Key/App": "key", "Label/Gruppi/Value": "label"})
     )
     ou_options = dict(zip(ou_df["key"], ou_df["label"]))
 
     # Sezione InserimentoGruppi
-    grp_df = cfg[cfg["Section"] == "InserimentoGruppi"][["Key/App", "Label/Gruppi/Value"]].rename(
-        columns={"Key/App": "app", "Label/Gruppi/Value": "gruppi"}
+    grp_df = (
+        cfg[cfg["Section"] == "InserimentoGruppi"]
+        [["Key/App", "Label/Gruppi/Value"]]
+        .rename(columns={"Key/App": "app", "Label/Gruppi/Value": "gruppi"})
     )
     gruppi = dict(zip(grp_df["app"], grp_df["gruppi"]))
 
     # Sezione Defaults
-    def_df = cfg[cfg["Section"] == "Defaults"][["Key/App", "Label/Gruppi/Value"]].rename(
-        columns={"Key/App": "key", "Label/Gruppi/Value": "value"}
+    def_df = (
+        cfg[cfg["Section"] == "Defaults"]
+        [["Key/App", "Label/Gruppi/Value"]]
+        .rename(columns={"Key/App": "key", "Label/Gruppi/Value": "value"})
     )
     defaults = dict(zip(def_df["key"], def_df["value"]))
 
@@ -39,13 +44,23 @@ st.title("1.2 Risorsa Esterna: Somministrato/Stage")
 config_file = st.file_uploader(
     "Carica il file di configurazione (config_corrected.xlsx)",
     type=["xlsx"],
-    help="Deve contenere il foglio “Somministrato”"
+    help="Deve contenere il foglio “Somministrato” con colonna Section"
 )
 if not config_file:
     st.warning("Per favore carica il file di configurazione per continuare.")
     st.stop()
 
 ou_options, gruppi, defaults = load_config_from_bytes(config_file.read())
+
+# ------------------------------------------------------------
+# Determinazione del valore di OU da defaults → ou_esterna_stage
+# ------------------------------------------------------------
+ou_key_default = defaults.get("ou_esterna_stage", None)
+if ou_key_default and ou_key_default in ou_options:
+    ou_value = ou_options[ou_key_default]
+else:
+    # fallback al primo valore disponibile
+    ou_value = next(iter(ou_options.values())) if ou_options else ""
 
 # ------------------------------------------------------------
 # Utility functions
@@ -105,7 +120,6 @@ expire_date      = st.text_input("Data di Fine (gg-mm-aaaa)", defaults.get("expi
 # ------------------------------------------------------------
 # Valori fissi prelevati dalla configurazione
 # ------------------------------------------------------------
-ou_value           = defaults.get("ou_esterna_stage", "")
 employee_id        = defaults.get("employee_id_default", "")
 inserimento_gruppo = gruppi.get("esterna_stage", "")
 telephone_number   = defaults.get("telephone_interna", "")
@@ -119,7 +133,7 @@ if st.button("Genera CSV Somministrato"):
     cn      = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
     exp_fmt = formatta_data(expire_date)
     upn     = f"{sAM}@consip.it"
-    mobile  = f"+39 {numero_telefono}" if numero_telefono else ""
+    mobile  = f"+39 {numero_telefono}" if numero_telefon o else ""
     name    = cn
     display = cn
     given   = f"{nome} {secondo_nome}".strip()
