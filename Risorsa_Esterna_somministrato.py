@@ -122,20 +122,31 @@ if st.button("Genera CSV Somministrato"):
     exp_fmt = formatta_data(expire_date)
     upn = f"{sAM}@consip.it"
     mobile = f"+39 {numero_telefono}" if numero_telefono else ""
-    name = cn
-    display = cn
     given = f"{nome} {secondo_nome}".strip()
     surn = f"{cognome} {secondo_cognome}".strip()
 
     row = [
-        sAM, "SI", ou_value, name, display, cn, given, surn,
+        sAM, "SI", ou_value, cn, cn, cn, given, surn,
         codice_fiscale, employee_id, department, description or "", "No", exp_fmt,
         upn, upn, mobile, "", inserimento_gruppo, "", "",
         telephone_number, company
     ]
 
     buf = io.StringIO()
-    writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
+    # Disattiviamo il quoting automatico e definiamo "\" come escapechar
+    writer = csv.writer(buf, quoting=csv.QUOTE_NONE, escapechar="\\")
+
+    # Aggiungiamo manualmente i doppi apici ai campi indicati
+    for i in (2, 3, 4, 5):       # OU, Name, DisplayName, cn
+        row[i] = f"\"{row[i]}\""
+    if secondo_nome:             # GivenName solo se presente
+        row[6] = f"\"{row[6]}\""
+    if secondo_cognome:          # Surname solo se presente
+        row[7] = f"\"{row[7]}\""
+    row[13] = f"\"{row[13]}\""   # ExpireDate
+    row[16] = f"\"{row[16]}\""   # mobile
+
+    # Scriviamo header + riga
     writer.writerow(HEADER)
     writer.writerow(row)
     buf.seek(0)
