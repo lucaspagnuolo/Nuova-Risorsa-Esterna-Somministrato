@@ -127,13 +127,13 @@ if st.button("Genera CSV Somministrato"):
 
     row = [
         sAM, "SI", ou_value, cn, cn, cn, given, surn,
-        codice_fiscale, employee_id, department, description or "", "No", exp_fmt,
+        codice_fiscale, employee_id, department, description or "<PC>", "No", exp_fmt,
         upn, upn, mobile, "", inserimento_gruppo, "", "",
         telephone_number, company
     ]
 
     buf = io.StringIO()
-    # Disattiviamo il quoting automatico e definiamo "\" come escapechar
+    # Disattiviamo il quoting automatico e definiamo "\\" come escapechar
     writer = csv.writer(buf, quoting=csv.QUOTE_NONE, escapechar="\\")
 
     # Aggiungiamo manualmente i doppi apici ai campi indicati
