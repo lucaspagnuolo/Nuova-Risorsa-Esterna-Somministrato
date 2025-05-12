@@ -105,6 +105,12 @@ numero_telefono = st.text_input("Mobile", "").replace(" ", "")
 description = st.text_input("PC", "").strip()
 expire_date = st.text_input("Data di Fine (gg-mm-aaaa)", defaults.get("expire_default", "30-06-2025")).strip()
 
+# Flag e SM
+profilazione_flag = st.checkbox("Deve essere profilato su qualche SM?")
+sm_lines = []
+if profilazione_flag:
+    sm_lines = st.text_area("SM su quali va profilato", "", placeholder="Inserisci una SM per riga").splitlines()
+
 # ------------------------------------------------------------
 # Valori fissi prelevati dalla configurazione
 # ------------------------------------------------------------
@@ -112,6 +118,38 @@ employee_id = defaults.get("employee_id_default", "")
 inserimento_gruppo = gruppi.get("esterna_stage", "")
 telephone_number = defaults.get("telephone_interna", "")
 company = defaults.get("company_interna", "")
+
+# ------------------------------------------------------------
+# Bottone di generazione anteprima
+# ------------------------------------------------------------
+if st.button("Anteprima Messaggio"):
+    sAM = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
+    cn = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
+    exp_fmt = formatta_data(expire_date)
+
+    # Tabella iniziale
+    table_md = f"""
+| Campo             | Valore                                     |
+|-------------------|--------------------------------------------|
+| Tipo Utenza       | Remota                                     |
+| Utenza            | {sAM}                                      |
+| Alias             | {sAM}                                      |
+| Display name      | {cn}                                       |
+| Common name       | {cn}                                       |
+| e-mail            | {sAM}@consip.it                            |
+| e-mail secondaria | {sAM}@consipspa.mail.onmicrosoft.com      |
+"""
+    st.markdown(table_md)
+    st.markdown("Inviare batch di notifica migrazione mail a: imac@consip.it  ")
+    st.markdown("Aggiungere utenza di dominio ai gruppi:\n- O365 Utenti Standard  \n- O365 Teams Premium  \n- O365 Copilot Plus")
+
+    # Profilazione SM
+    if profilazione_flag and sm_lines:
+        st.markdown("Profilare su SM:")
+        for sm in sm_lines:
+            if sm.strip(): st.markdown(f"- {sm}")
+
+    st.markdown("Grazie  \nSaluti")
 
 # ------------------------------------------------------------
 # Bottone di generazione CSV
@@ -133,20 +171,17 @@ if st.button("Genera CSV Somministrato"):
     ]
 
     buf = io.StringIO()
-    # Disattiviamo il quoting automatico e definiamo "\\" come escapechar
     writer = csv.writer(buf, quoting=csv.QUOTE_NONE, escapechar="\\")
 
-    # Aggiungiamo manualmente i doppi apici ai campi indicati
-    for i in (2, 3, 4, 5):       # OU, Name, DisplayName, cn
+    for i in (2, 3, 4, 5):
         row[i] = f"\"{row[i]}\""
-    if secondo_nome:             # GivenName solo se presente
+    if secondo_nome:
         row[6] = f"\"{row[6]}\""
-    if secondo_cognome:          # Surname solo se presente
+    if secondo_cognome:
         row[7] = f"\"{row[7]}\""
-    row[13] = f"\"{row[13]}\""   # ExpireDate
-    row[16] = f"\"{row[16]}\""   # mobile
+    row[13] = f"\"{row[13]}\""
+    row[16] = f"\"{row[16]}\""
 
-    # Scriviamo header + riga
     writer.writerow(HEADER)
     writer.writerow(row)
     buf.seek(0)
