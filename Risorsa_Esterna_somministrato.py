@@ -9,15 +9,13 @@ import io
 # ------------------------------------------------------------
 def load_config_from_bytes(data: bytes):
     cfg = pd.read_excel(io.BytesIO(data), sheet_name="Somministrato")
-    
     # InserimentoGruppi
     grp_df = (
         cfg[cfg["Section"] == "InserimentoGruppi"]
         [["Key/App", "Label/Gruppi/Value"]]
         .rename(columns={"Key/App": "app", "Label/Gruppi/Value": "gruppi"})
     )
-    gruppi = dict(zip(grp_df["app"], grp_df["gruppi"]))
-
+    gruppi = dict(zip(grp_df["app"], grp_df["gruppi"].split(";") if isinstance(grp_df["gruppi"].iloc[0], str) else grp_df["gruppi"]))
     # Defaults
     def_df = (
         cfg[cfg["Section"] == "Defaults"]
@@ -25,7 +23,6 @@ def load_config_from_bytes(data: bytes):
         .rename(columns={"Key/App": "key", "Label/Gruppi/Value": "value"})
     )
     defaults = dict(zip(def_df["key"], def_df["value"]))
-
     return gruppi, defaults
 
 # ------------------------------------------------------------
@@ -46,9 +43,18 @@ if not config_file:
 gruppi, defaults = load_config_from_bytes(config_file.read())
 
 # ------------------------------------------------------------
-# Determinazione del valore di OU dal default
+# Preleva O365-Groups e altri Defaults
 # ------------------------------------------------------------
-ou_value = defaults.get("ou_default", "")
+o365_groups = [
+    defaults.get("grp_o365_standard", "O365 Utenti Standard"),
+    defaults.get("grp_o365_teams",    "O365 Teams Premium"),
+    defaults.get("grp_o365_copilot",  "O365 Copilot Plus"),
+]
+ou_value         = defaults.get("ou_default", "")
+expire_default   = defaults.get("expire_default", "30-06-2025")
+department_def   = defaults.get("department_default", "")
+telephone_default= defaults.get("telephone_interna", "")
+company          = defaults.get("company_interna", "")
 
 # ------------------------------------------------------------
 # Utility functions
@@ -64,68 +70,64 @@ def formatta_data(data: str) -> str:
     return data
 
 def genera_samaccountname(nome: str, cognome: str,
-                           secondo_nome: str = "", secondo_cognome: str = "",
-                           esterno: bool = False) -> str:
+                          secondo_nome: str = "", secondo_cognome: str = "",
+                          esterno: bool = True) -> str:
     n, sn = nome.strip().lower(), secondo_nome.strip().lower()
     c, sc = cognome.strip().lower(), secondo_cognome.strip().lower()
-    suffix = ".ext" if esterno else ""
-    limit = 16 if esterno else 20
+    suffix = ".ext"
     cand = f"{n}{sn}.{c}{sc}"
-    if len(cand) <= limit:
+    if len(cand) <= 16:
         return cand + suffix
     cand = f"{n[:1]}{sn[:1]}.{c}{sc}"
-    if len(cand) <= limit:
-        return cand + suffix
-    return (f"{n[:1]}{sn[:1]}.{c}")[:limit] + suffix
+    return (cand + suffix)[:16+len(suffix)]
 
 def build_full_name(cognome: str, secondo_cognome: str,
                     nome: str, secondo_nome: str,
-                    esterno: bool = False) -> str:
+                    esterno: bool = True) -> str:
     parts = [p for p in [cognome, secondo_cognome, nome, secondo_nome] if p]
-    full = " ".join(parts)
-    return full + (" (esterno)" if esterno else "")
+    return " ".join(parts) + " (esterno)"
 
 HEADER = [
-    "sAMAccountName", "Creation", "OU", "Name", "DisplayName", "cn", "GivenName", "Surname",
-    "employeeNumber", "employeeID", "department", "Description", "passwordNeverExpired",
-    "ExpireDate", "userprincipalname", "mail", "mobile", "RimozioneGruppo", "InserimentoGruppo",
-    "disable", "moveToOU", "telephoneNumber", "company"
+    "sAMAccountName","Creation","OU","Name","DisplayName","cn","GivenName","Surname",
+    "employeeNumber","employeeID","department","Description","passwordNeverExpired",
+    "ExpireDate","userprincipalname","mail","mobile","RimozioneGruppo","InserimentoGruppo",
+    "disable","moveToOU","telephoneNumber","company"
 ]
 
 # ------------------------------------------------------------
-# Form di input nell’ordine richiesto
+# Form di input
 # ------------------------------------------------------------
-cognome = st.text_input("Cognome").strip().capitalize()
-secondo_cognome = st.text_input("Secondo Cognome").strip().capitalize()
-nome = st.text_input("Nome").strip().capitalize()
-secondo_nome = st.text_input("Secondo Nome").strip().capitalize()
-codice_fiscale = st.text_input("Codice Fiscale", "").strip()
-department = st.text_input("Sigla Divisione-Area", defaults.get("department_default", "")).strip()
-numero_telefono = st.text_input("Mobile", "").replace(" ", "")
-description = st.text_input("PC", "").strip()
-expire_date = st.text_input("Data di Fine (gg-mm-aaaa)", defaults.get("expire_default", "30-06-2025")).strip()
+st.subheader("Modulo Inserimento Risorsa Esterna: Somministrato/Stage")
 
-# Flag e SM
+cognome         = st.text_input("Cognome").strip().capitalize()
+secondo_cognome = st.text_input("Secondo Cognome").strip().capitalize()
+nome            = st.text_input("Nome").strip().capitalize()
+secondo_nome    = st.text_input("Secondo Nome").strip().capitalize()
+codice_fiscale  = st.text_input("Codice Fiscale", "").strip()
+department      = st.text_input("Sigla Divisione-Area", department_def).strip()
+numero_telefono = st.text_input("Mobile", "").replace(" ", "")
+description     = st.text_input("PC (lascia vuoto per <PC>)", "").strip()
+expire_date     = st.text_input("Data di Fine (gg-mm-aaaa)", expire_default).strip()
+
 profilazione_flag = st.checkbox("Deve essere profilato su qualche SM?")
 sm_lines = []
 if profilazione_flag:
     sm_lines = st.text_area("SM su quali va profilato", "", placeholder="Inserisci una SM per riga").splitlines()
 
-# ------------------------------------------------------------
-# Valori fissi prelevati dalla configurazione
-# ------------------------------------------------------------
-employee_id = defaults.get("employee_id_default", "")
+employee_id        = ""  # SEMPRE VUOTO
 inserimento_gruppo = gruppi.get("esterna_stage", "")
-telephone_number = defaults.get("telephone_interna", "")
-company = defaults.get("company_interna", "")
+telephone_number   = telephone_default
+company            = company
 
 # ------------------------------------------------------------
-# Bottone di generazione anteprima
+# Anteprima Messaggio
 # ------------------------------------------------------------
 if st.button("Anteprima Messaggio"):
-    sAM = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
-    cn = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
-    exp_fmt = formatta_data(expire_date)
+    sAM    = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
+    cn     = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
+    exp_fmt= formatta_data(expire_date)
+    upn    = f"{sAM}@consip.it"
+    mobile = f"+39 {numero_telefono}" if numero_telefono else ""
 
     # Tabella iniziale
     table_md = f"""
@@ -136,16 +138,19 @@ if st.button("Anteprima Messaggio"):
 | Alias             | {sAM}                                      |
 | Display name      | {cn}                                       |
 | Common name       | {cn}                                       |
-| e-mail            | {sAM}@consip.it                            |
-| e-mail secondaria | {sAM}@consipspa.mail.onmicrosoft.com      |
+| e-mail            | {upn}                                      |
+| e-mail secondaria | {upn}                                      |
 """
-    st.markdown("Ciao.\n Richiedo cortesemente la definizione di una casella di posta come sottoindicato.")
+    st.markdown("Ciao.\nRichiedo cortesemente la definizione di una casella di posta come sottoindicato.")
     st.markdown(table_md)
-    st.markdown("Inviare batch di notifica migrazione mail a: imac@consip.it  ")
-    st.markdown("Aggiungere utenza di dominio ai gruppi:\n- O365 Utenti Standard  \n- O365 Teams Premium  \n- O365 Copilot Plus")
+
+    # Gruppi O365 dinamici
+    o365_md = "\n".join(f"- {g}" for g in o365_groups)
+    st.markdown(f"Inviare batch di notifica migrazione mail a: imac@consip.it  \n"
+                f"Aggiungere utenza di dominio ai gruppi:\n{o365_md}")
 
     # Profilazione SM
-    if profilazione_flag and sm_lines:
+    if profilazione_flag:
         st.markdown("Profilare su SM:")
         for sm in sm_lines:
             if sm.strip(): st.markdown(f"- {sm}")
@@ -153,19 +158,20 @@ if st.button("Anteprima Messaggio"):
     st.markdown("Grazie  \nSaluti")
 
 # ------------------------------------------------------------
-# Bottone di generazione CSV
+# Generazione CSV
 # ------------------------------------------------------------
 if st.button("Genera CSV Somministrato"):
-    sAM = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
-    cn = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
-    exp_fmt = formatta_data(expire_date)
-    upn = f"{sAM}@consip.it"
+    sAM    = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
+    cn     = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
+    exp_fmt= formatta_data(expire_date)
+    upn    = f"{sAM}@consip.it"
     mobile = f"+39 {numero_telefono}" if numero_telefono else ""
-    given = f"{nome} {secondo_nome}".strip()
-    surn = f"{cognome} {secondo_cognome}".strip()
+    given  = f"{nome} {secondo_nome}".strip()
+    surn   = f"{cognome} {secondo_cognome}".strip()
 
     row = [
-        sAM, "SI", ou_value, cn, cn, cn, given, surn,
+        sAM, "SI", ou_value,
+        cn, cn, cn, given, surn,
         codice_fiscale, employee_id, department, description or "<PC>", "No", exp_fmt,
         upn, upn, mobile, "", inserimento_gruppo, "", "",
         telephone_number, company
@@ -173,13 +179,7 @@ if st.button("Genera CSV Somministrato"):
 
     buf = io.StringIO()
     writer = csv.writer(buf, quoting=csv.QUOTE_NONE, escapechar="\\")
-
-    for i in (2, 3, 4, 5):
-        row[i] = f"\"{row[i]}\""
-    if secondo_nome:
-        row[6] = f"\"{row[6]}\""
-    if secondo_cognome:
-        row[7] = f"\"{row[7]}\""
+    for i in (2,3,4,5): row[i] = f"\"{row[i]}\""
     row[13] = f"\"{row[13]}\""
     row[16] = f"\"{row[16]}\""
 
