@@ -27,7 +27,7 @@ def load_config_from_bytes(data: bytes):
     )
     defaults = dict(zip(def_df["key"], def_df["value"]))
 
-    return gruppi, defaults ou_options,gruppi,defaults
+    return gruppi, defaults
 
 # ------------------------------------------------------------
 # Streamlit App
