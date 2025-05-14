@@ -42,7 +42,7 @@ if not config_file:
     st.warning("Carica il file di configurazione.")
     st.stop()
 
-ou_options,gruppi,defaults = load_config_from_bytes(config_file.read())
+gruppi, defaults = load_config_from_bytes(config_file.read())
 
 # Preleva valori Defaults
 dl_standard = defaults.get('dl_standard','').split(';')
