@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import io
 
 # ------------------------------------------------------------
-# ------------------------------------------------------------
 # Caricamento configurazione da Excel caricato dall'utente
 # ------------------------------------------------------------
 def load_config_from_bytes(data: bytes):
@@ -16,7 +15,6 @@ def load_config_from_bytes(data: bytes):
         [["Key/App", "Label/Gruppi/Value"]]
         .rename(columns={"Key/App": "app", "Label/Gruppi/Value": "gruppi"})
     )
-    # manteniamo la stringa grezza
     gruppi = dict(zip(grp_df["app"], grp_df["gruppi"]))
 
     # Defaults
@@ -26,83 +24,114 @@ def load_config_from_bytes(data: bytes):
         .rename(columns={"Key/App": "key", "Label/Gruppi/Value": "value"})
     )
     defaults = dict(zip(def_df["key"], def_df["value"]))
-
     return gruppi, defaults
 
 # ------------------------------------------------------------
-# Streamlit App
+# App 1.2: Risorsa Esterna - Somministrato/Stage
 # ------------------------------------------------------------
-st.set_page_config(page_title='1.1 Nuova Risorsa Interna')
-st.title('1.1 Nuova Risorsa Interna')
+st.set_page_config(page_title="1.2 Risorsa Esterna: Somministrato/Stage")
+st.title("1.2 Risorsa Esterna: Somministrato/Stage")
 
-# Uploader
-config_file = st.file_uploader("Carica config (config.xlsx)", type=['xlsx'],
-    help="Foglio 'Risorsa Interna' con Section, Key/App, Label/Gruppi/Value")
+config_file = st.file_uploader(
+    "Carica il file di configurazione (config.xlsx)",
+    type=["xlsx"],
+    help="Deve contenere il foglio 'Somministrato' con colonne Section, Key/App, Label/Gruppi/Value"
+)
 if not config_file:
-    st.warning("Carica il file di configurazione.")
+    st.warning("Per favore carica il file di configurazione per continuare.")
     st.stop()
 
 gruppi, defaults = load_config_from_bytes(config_file.read())
 
+# ------------------------------------------------------------
 # Preleva valori Defaults
-dl_standard = defaults.get('dl_standard','').split(';')
-dl_vip      = defaults.get('dl_vip','').split(';')
+# ------------------------------------------------------------
 o365_groups = [
-    defaults.get('grp_o365_standard','O365 Utenti Standard'),
-    defaults.get('grp_o365_teams','O365 Teams Premium'),
-    defaults.get('grp_o365_copilot','O365 Copilot Plus')
+    defaults.get("grp_o365_standard", "O365 Utenti Standard"),
+    defaults.get("grp_o365_teams",    "O365 Teams Premium"),
+    defaults.get("grp_o365_copilot",  "O365 Copilot Plus")
 ]
-grp_foorban = defaults.get('grp_foorban','Foorban_Users')
-pillole     = defaults.get('pillole','Pillole formative Teams Premium')
+ou_value          = defaults.get("ou_default", "Somministrati e Stage")
+expire_default    = defaults.get("expire_default", "30-06-2025")
+department_default= defaults.get("department_default", "")
+telephone_default = defaults.get("telephone_interna", "")
+company           = defaults.get("company_interna", "")
 
-# Input anagrafici
-st.subheader('Modulo Inserimento Nuova Risorsa Interna')
-employee_id = st.text_input('Matricola',defaults.get('employee_id_default','')).strip()
-cognome     = st.text_input('Cognome').strip().capitalize()
-secondo_cognome = st.text_input('Secondo Cognome').strip().capitalize()
-nome        = st.text_input('Nome').strip().capitalize()
-secondo_nome= st.text_input('Secondo Nome').strip().capitalize()
-codice_fiscale = st.text_input('Codice Fiscale').strip()
-department  = st.text_input('Sigla Divisione-Area',defaults.get('department_default','')).strip()
-numero_telefono = st.text_input('Mobile (+39 già inserito)').replace(' ','')
-description = st.text_input('PC (lascia vuoto per <PC>)','<PC>').strip()
+# ------------------------------------------------------------
+# Utility functions
+# ------------------------------------------------------------
+def formatta_data(data: str) -> str:
+    for sep in ["-", "/"]:
+        try:
+            g, m, a = map(int, data.split(sep))
+            dt = datetime(a, m, g) + timedelta(days=1)
+            return dt.strftime("%m/%d/%Y 00:00")
+        except:
+            continue
+    return data
 
-# Resident flag
-resident = st.checkbox('È Resident?')
-numero_fisso = ''
-if resident:
-    numero_fisso = st.text_input('Numero fisso Resident (+39 già inserito)').strip()
-telephone_default = defaults.get('telephone_interna','')
-telephone_number = f'+39 {numero_fisso}' if resident and numero_fisso else telephone_default
+def genera_samaccountname(nome: str, cognome: str,
+                           secondo_nome: str = "", secondo_cognome: str = "",
+                           esterno: bool = True) -> str:
+    n, sn = nome.strip().lower(), secondo_nome.strip().lower()
+    c, sc = cognome.strip().lower(), secondo_cognome.strip().lower()
+    suffix = ".ext"
+    cand = f"{n}{sn}.{c}{sc}"
+    return (cand + suffix)[:16+len(suffix)]
 
-# Tipologia Utente
-ou_keys = list(ou_options.keys())
-ou_vals = list(ou_options.values())
-def_o = defaults.get('ou_default',ou_vals[0] if ou_vals else '')
-label_ou = st.selectbox('Tipologia Utente',ou_vals,index=ou_vals.index(def_o))
-selected_key = ou_keys[ou_vals.index(label_ou)]
-ou_value = ou_options[selected_key]
+def build_full_name(cognome: str, secondo_cognome: str,
+                    nome: str, secondo_nome: str,
+                    esterno: bool = True) -> str:
+    parts = [p for p in [cognome, secondo_cognome, nome, secondo_nome] if p]
+    return " ".join(parts) + " (esterno)"
 
-inserimento_gruppo = gruppi.get('interna','')
-company = defaults.get('company_interna','')
+HEADER = [
+    "sAMAccountName","Creation","OU","Name","DisplayName","cn","GivenName","Surname",
+    "employeeNumber","employeeID","department","Description","passwordNeverExpired",
+    "ExpireDate","userprincipalname","mail","mobile","RimozioneGruppo","InserimentoGruppo",
+    "disable","moveToOU","telephoneNumber","company"
+]
 
-# Operatività e SM
-st.subheader('Configurazione Data Operatività e Profilazione SM')
-data_operativa = st.text_input('In che giorno prende operatività? (gg/mm/aaaa)').strip()
-profilazione = st.checkbox('Deve essere profilato su qualche SM?')
+# ------------------------------------------------------------
+# Form di input
+# ------------------------------------------------------------
+st.subheader("Modulo Inserimento Risorsa Esterna: Somministrato/Stage")
+
+cognome         = st.text_input("Cognome").strip().capitalize()
+secondo_cognome = st.text_input("Secondo Cognome").strip().capitalize()
+nome            = st.text_input("Nome").strip().capitalize()
+secondo_nome    = st.text_input("Secondo Nome").strip().capitalize()
+codice_fiscale  = st.text_input("Codice Fiscale", "").strip()
+department      = st.text_input("Sigla Divisione-Area", department_default).strip()
+numero_telefono = st.text_input("Mobile", "").replace(" ", "")
+description     = st.text_input("PC (lascia vuoto per <PC>)", "").strip()
+expire_date     = st.text_input("Data di Fine (gg-mm-aaaa)", expire_default).strip()
+
+# Profilazione SM
+profilazione_flag = st.checkbox("Deve essere profilato su qualche SM?")
 sm_lines = []
-if profilazione:
-    sm_lines = st.text_area('SM su quali va profilato','',placeholder='Inserisci una SM per riga').splitlines()
+if profilazione_flag:
+    sm_lines = st.text_area(
+        "SM su quali va profilato", "", placeholder="Inserisci una SM per riga"
+    ).splitlines()
 
-# Selezione DL
-dl_list = dl_standard if selected_key=='utenti_standard' else dl_vip if selected_key=='utenti_vip' else []
+# Dati fissi
+employee_id        = ""  # sempre vuoto
+inserimento_gruppo = gruppi.get("esterna_stage", "")
+telephone_number   = telephone_default
+company            = company
 
-# Anteprima
-if st.button('Template per Posta Elettronica'):
-    sAM = f"{nome.lower()}.{cognome.lower()}"
-    cn = f"{cognome} {nome}"
-    groups_md = "\n".join(f"- {g}" for g in o365_groups)
-    table = f"""
+# ------------------------------------------------------------
+# Anteprima Messaggio
+# ------------------------------------------------------------
+if st.button("Anteprima Messaggio"):
+    sAM     = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
+    cn      = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
+    exp_fmt = formatta_data(expire_date)
+    upn     = f"{sAM}@consip.it"
+    mobile  = f"+39 {numero_telefono}" if numero_telefono else ""
+
+    table_md = f"""
 | Campo             | Valore                                     |
 |-------------------|--------------------------------------------|
 | Tipo Utenza       | Remota                                     |
@@ -110,36 +139,62 @@ if st.button('Template per Posta Elettronica'):
 | Alias             | {sAM}                                      |
 | Display name      | {cn}                                       |
 | Common name       | {cn}                                       |
-| e-mail            | {sAM}@consip.it                            |
-| e-mail secondaria | {sAM}@consipspa.mail.onmicrosoft.com       |
-| cell              | +39 {numero_telefono}                      |
+| e-mail            | {upn}                                      |
+| e-mail secondaria | {upn}                                      |
 """
-    st.markdown(f"Ciao.  \nRichiedo la definizione di una casella come sottoindicato.")
-    st.markdown(table)
-    st.markdown(f"Inviare batch di notifica migrazione mail a: imac@consip.it  \n"+
-                f"Aggiungere utenza di dominio ai gruppi:\n{groups_md}")
-    if dl_list:
-        st.markdown(f"Il giorno **{data_operativa}** occorre inserire la casella nelle DL:")
-        for dl in dl_list:
-            st.markdown(f"- {dl}")
-    if profilazione:
-        st.markdown('Profilare su SM:')
-        for sm in sm_lines:
-            st.markdown(f"- {sm}")
-    st.markdown(f"Aggiungere utenza al:\n- gruppo Azure: {grp_foorban}\n- canale {pillole}")
-    st.markdown('Grazie  \nSaluti')
+    st.markdown("Ciao.\nRichiedo la definizione di una casella come sottoindicato.")
+    st.markdown(table_md)
 
-# CSV
-if st.button('Genera CSV Interna'):
-    sAM = f"{nome.lower()}.{cognome.lower()}"
-    cn = f"{cognome} {nome}"
-    mobile = f"+39 {numero_telefono}" if numero_telefono else ''
-    row = [sAM,'SI',ou_value,cn,cn,cn,nome,nome,
-           codice_fiscale,employee_id,department,description,'No','',
-           f"{sAM}@consip.it",f"{sAM}@consip.it",mobile,'',
-           inserimento_gruppo,'','',telephone_number,company]
-    buf = io.StringIO();writer=csv.writer(buf,quoting=csv.QUOTE_NONE,escapechar='\\')
-    writer.writerow(HEADER);writer.writerow(row);buf.seek(0)
-    st.dataframe(pd.DataFrame([row],columns=HEADER))
-    st.download_button('📥 Scarica CSV',buf.getvalue(),f"{cognome}_{nome[:1]}_interno.csv","text/csv")
-    st.success(f"✅ CSV generato per {sAM}")
+    groups_md = "\n".join(f"- {g}" for g in o365_groups)
+    st.markdown(
+        f"Inviare batch di notifica migrazione mail a: imac@consip.it  \n"
+        f"Aggiungere utenza di dominio ai gruppi:\n{groups_md}"
+    )
+
+    if profilazione_flag:
+        st.markdown("Profilare su SM:")
+        for sm in sm_lines:
+            if sm.strip(): st.markdown(f"- {sm}")
+
+    st.markdown("Grazie  \nSaluti")
+
+# ------------------------------------------------------------
+# Generazione CSV
+# ------------------------------------------------------------
+if st.button("Genera CSV Somministrato"):
+    sAM     = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
+    cn      = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
+    exp_fmt = formatta_data(expire_date)
+    upn     = f"{sAM}@consip.it"
+    mobile  = f"+39 {numero_telefono}" if numero_telefono else ""
+    given   = f"{nome} {secondo_nome}".strip()
+    surn    = f"{cognome} {secondo_cognome}".strip()
+
+    row = [
+        sAM, "SI", ou_value,
+        cn, cn, cn, given, surn,
+        codice_fiscale, employee_id, department, description or "<PC>", "No", exp_fmt,
+        upn, upn, mobile, "", inserimento_gruppo, "", "",
+        telephone_number, company
+    ]
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, quoting=csv.QUOTE_NONE, escapechar="\\")
+
+    # Quote i campi necessari
+    for i in (2,3,4,5): row[i] = f"\"{row[i]}\""
+    row[13] = f"\"{row[13]}\""
+    row[16] = f"\"{row[16]}\""
+
+    writer.writerow(HEADER)
+    writer.writerow(row)
+    buf.seek(0)
+
+    st.dataframe(pd.DataFrame([row], columns=HEADER))
+    st.download_button(
+        label="📥 Scarica CSV Somministrato",
+        data=buf.getvalue(),
+        file_name=f"{cognome}_{nome[:1]}_stage.csv",
+        mime="text/csv"
+    )
+    st.success(f"✅ File CSV generato per '{sAM}'")
