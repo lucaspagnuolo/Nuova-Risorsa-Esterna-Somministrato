@@ -147,7 +147,7 @@ if st.button("Template per Posta Elettronica"):
     exp_fmt = formatta_data(expire_date)
     upn     = f"{sAM}@consip.it"
     mobile  = f"+39 {numero_telefono}" if numero_telefono else ""
-    
+    data_fine= formatta_data(expire_date)
 
     table_md = f"""
 | Campo             | Valore                                     |
@@ -160,7 +160,7 @@ if st.button("Template per Posta Elettronica"):
 | e-mail                 | {upn}                                 |
 | e-mail secondaria      | {upn}                                 |
 | CF                     | {codice_fiscale}                      |
-|Data Fine (mm/gg/aaaa)**| {formatta_data(expire_date)}          |
+|Data Fine (mm/gg/aaaa)**| {data_fine}                           |
 """
     st.markdown("Ciao.\nRichiedo la definizione di una casella come sottoindicato.")
     st.markdown(table_md)
