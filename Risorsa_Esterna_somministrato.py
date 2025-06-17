@@ -123,6 +123,7 @@ department      = st.text_input("Sigla Divisione-Area", department_default).stri
 numero_telefono = st.text_input("Mobile", "").replace(" ", "")
 description     = st.text_input("PC (lascia vuoto per <PC>)", "").strip()
 expire_date     = st.text_input("Data di Fine (gg-mm-aaaa)", expire_default).strip()
+manager            = st.text_input("Manager").strip().capitalize()
 
 # Profilazione SM
 profilazione_flag = st.checkbox("Deve essere profilato su qualche SM?")
@@ -157,6 +158,7 @@ if st.button("Template per Posta Elettronica"):
 | Alias                  | {sAM}                                 |
 | Display name           | {cn}                                  |
 | Common name            | {cn}                                  |
+| Manager                | {manager}                             |
 | e-mail                 | {upn}                                 |
 | e-mail secondaria      | {upn}                                 |
 | CF                     | {codice_fiscale}                      |
