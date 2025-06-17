@@ -161,7 +161,7 @@ if st.button("Template per Posta Elettronica"):
 | Manager                | {manager}                             |
 | e-mail                 | {upn}                                 |
 | e-mail secondaria      | {upn}                                 |
-| CF                     | {codice_fiscale}                      |
+| Codice Fiscale         | {codice_fiscale}                      |
 |Data Fine (mm/gg/aaaa)**| {data_fine}                           |
 """
     st.markdown("Ciao.\nRichiedo la definizione di una casella come sottoindicato.")
