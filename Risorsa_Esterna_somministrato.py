@@ -170,7 +170,7 @@ if st.button("Template per Posta Elettronica"):
 
     groups_md = "\n".join(f"- {g}" for g in o365_groups)
     st.markdown(
-        f"Inviare batch di notifica migrazione mail a: imac@consip.it  \n"
+  #      f"Inviare batch di notifica migrazione mail a: imac@consip.it  \n"
         f"Aggiungere utenza di dominio ai gruppi:\n{groups_md}   \n"
     )
     st.markdown(f"Aggiungere utenza al:\n- gruppo Azure: {grp_foorban}\n- canale {pillole}")
