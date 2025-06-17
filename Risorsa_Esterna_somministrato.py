@@ -171,7 +171,7 @@ if st.button("Template per Posta Elettronica"):
         f"Inviare batch di notifica migrazione mail a: imac@consip.it  \n"
         f"Aggiungere utenza di dominio ai gruppi:\n{groups_md}   \n"
     )
-    st.markdown("Aggiungere utenza al:\n- gruppo Azure: {grp_foorban}\n- canale {pillole}")
+    st.markdown(f"Aggiungere utenza al:\n- gruppo Azure: {grp_foorban}\n- canale {pillole}")
     if profilazione_flag:
         st.markdown("Profilare su SM:")
         for sm in sm_lines:
