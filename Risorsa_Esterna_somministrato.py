@@ -51,6 +51,9 @@ o365_groups = [
     defaults.get("grp_o365_teams",    "O365 Teams Premium"),
     defaults.get("grp_o365_copilot",  "O365 Copilot Plus")
 ]
+grp_foorban = defaults.get("grp_foorban", "Foorban_Users")
+pillole = defaults.get("pillole", "Pillole formative Teams Premium")
+
 ou_value          = defaults.get("ou_default", "Somministrati e Stage")
 expire_default    = defaults.get("expire_default", "30-06-2025")
 department_default= defaults.get("department_default", "")
@@ -144,25 +147,30 @@ if st.button("Template per Posta Elettronica"):
     exp_fmt = formatta_data(expire_date)
     upn     = f"{sAM}@consip.it"
     mobile  = f"+39 {numero_telefono}" if numero_telefono else ""
+    
 
     table_md = f"""
 | Campo             | Valore                                     |
 |-------------------|--------------------------------------------|
-| Tipo Utenza       | Remota                                     |
-| Utenza            | {sAM}                                      |
-| Alias             | {sAM}                                      |
-| Display name      | {cn}                                       |
-| Common name       | {cn}                                       |
-| e-mail            | {upn}                                      |
-| e-mail secondaria | {upn}                                      |
+| Tipo Utenza            | Remota                                |
+| Utenza                 | {sAM}                                 |
+| Alias                  | {sAM}                                 |
+| Display name           | {cn}                                  |
+| Common name            | {cn}                                  |
+| e-mail                 | {upn}                                 |
+| e-mail secondaria      | {upn}                                 |
+| CF                     | {codice_fiscale}                      |
+|Data Fine (mm/gg/aaaa)**| {formatta_data(expire_date)}          |
 """
     st.markdown("Ciao.\nRichiedo la definizione di una casella come sottoindicato.")
     st.markdown(table_md)
+    st.markdown("""** il campo "Data fine" deve essere inserito in "Data Assunzione" """)
 
     groups_md = "\n".join(f"- {g}" for g in o365_groups)
     st.markdown(
         f"Inviare batch di notifica migrazione mail a: imac@consip.it  \n"
-        f"Aggiungere utenza di dominio ai gruppi:\n{groups_md}"
+        f"Aggiungere utenza di dominio ai gruppi:\n{groups_md}   \n"
+        f"Aggiungere utenza al:\n- gruppo Azure: {grp_foorban}\n- canale {pillole}"
     )
 
     if profilazione_flag:
