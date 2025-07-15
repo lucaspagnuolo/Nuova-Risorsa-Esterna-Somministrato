@@ -10,7 +10,7 @@ import unicodedata
 # ------------------------------------------------------------
 def load_config_from_bytes(data: bytes):
     # Carica tutti i fogli del workbook
-    cfg_sheets = pd.read_excel(io.BytesIO(data), sheet_name=None)
+    cfg_sheets = pd.read_excel(io.BytesIO(data), sheet_name=None, engine="openpyxl")
 
     # Estrai configurazione Somministrato
     sommin = cfg_sheets.get("Somministrato")
@@ -114,17 +114,17 @@ if not config_file:
 gruppi, defaults, managers = load_config_from_bytes(config_file.read())
 
 # Valori di default
- o365_groups = [
+o365_groups = [
     defaults.get("grp_o365_standard","O365 Utenti Standard"),
     defaults.get("grp_o365_teams","O365 Teams Premium"),
     defaults.get("grp_o365_copilot","O365 Copilot Plus")]
- grp_foorban        = defaults.get("grp_foorban","Foorban_Users")
- pillole            = defaults.get("pillole","Pillole formative Teams Premium")
- ou_value           = defaults.get("ou_default","Somministrati e Stage")
- expire_default     = defaults.get("expire_default","30-06-2025")
- department_default = defaults.get("department_default","")
- telephone_default  = defaults.get("telephone_interna","")
- company            = defaults.get("company_interna","")
+grp_foorban        = defaults.get("grp_foorban","Foorban_Users")
+pillole            = defaults.get("pillole","Pillole formative Teams Premium")
+ou_value           = defaults.get("ou_default","Somministrati e Stage")
+expire_default     = defaults.get("expire_default","30-06-2025")
+department_default = defaults.get("department_default","")
+telephone_default  = defaults.get("telephone_interna","")
+company            = defaults.get("company_interna","")
 
 # Modulo di input
 st.subheader("Modulo Inserimento Risorsa Esterna: Somministrato/Stage")
@@ -195,7 +195,7 @@ if st.button("Genera CSV Somministrato"):
     mobile = f"+39 {numero_telefono}" if numero_telefono else ""
     given  = f"{nome} {secondo_nome}".strip()
     surn   = f"{cognome} {secondo_cognome}".strip()
-    
+
     # Costruisci basename normalizzato
     nc     = normalize_name(cognome)
     ns     = normalize_name(secondo_cognome) if secondo_cognome else ""
@@ -243,3 +243,4 @@ if st.button("Genera CSV Somministrato"):
         mime="text/csv"
     )
     st.success(f"✅ CSV generati per '{sAM}'")
+
