@@ -197,9 +197,12 @@ if st.button("Genera CSV Somministrato"):
     surn   = f"{cognome} {secondo_cognome}".strip()
 
     # Costruisci basename normalizzato
-    nc     = normalize_name(cognome)
-    ns     = normalize_name(secondo_cognome) if secondo_cognome else ""
-    basename = "_".join([nc] + ([ns] if ns else []) + [nome[:1].lower()])
+    norm_cognome = normalize_name(cognome)
+    norm_secondo = normalize_name(secondo_cognome) if secondo_cognome else ''
+    name_parts = [norm_cognome] + ([norm_secondo] if norm_secondo else []) + [nome[:1].lower()]
+    basename = "_".join(name_parts)
+    name_parts = [cognome] + ([secondo_cognome] if secondo_cognome else []) + [nome[:1]]
+    basename = "_".join(name_parts)
 
     # Righe CSV
     row_user = [
