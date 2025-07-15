@@ -36,7 +36,15 @@ def load_config_from_bytes(data: bytes):
         rd.columns = ["label", "value"]
         managers = dict(zip(rd["label"], rd["value"]))
 
-    return gruppi, defaults, managers
+    # Estrai organigramma
+    org_sheet = cfg_sheets.get("organigramma")
+    organigramma = {}
+    if org_sheet is not None:
+        org = org_sheet.iloc[:, :2].dropna(how="all")
+        org.columns = ["label", "value"]
+        organigramma = dict(zip(org["label"], org["value"]))
+
+    return gruppi, defaults, managers, organigramma
 
 # ------------------------------------------------------------
 # Utility functions
@@ -111,7 +119,8 @@ if not config_file:
     st.warning("Per favore carica il file di configurazione per continuare.")
     st.stop()
 
-gruppi, defaults, managers = load_config_from_bytes(config_file.read())
+# Carica configurazione
+gruppi, defaults, managers, organigramma = load_config_from_bytes(config_file.read())
 
 # Valori di default
 o365_groups = [
@@ -133,7 +142,14 @@ secondo_cognome  = st.text_input("Secondo Cognome").strip().capitalize()
 nome             = st.text_input("Nome").strip().capitalize()
 secondo_nome     = st.text_input("Secondo Nome").strip().capitalize()
 codice_fiscale   = st.text_input("Codice Fiscale","" ).strip()
-department       = st.text_input("Sigla Divisione-Area", department_default).strip()
+
+# Dropdown per Sigla Divisione-Area da organigramma
+if organigramma:
+    dept_label = st.selectbox("Sigla Divisione-Area", options=["-- Seleziona --"] + list(organigramma.keys()))
+    department = organigramma.get(dept_label, "") if dept_label and dept_label != "-- Seleziona --" else department_default
+else:
+    department = st.text_input("Sigla Divisione-Area", department_default).strip()
+
 numero_telefono  = st.text_input("Mobile","" ).replace(" ","")
 description      = st.text_input("PC (lascia vuoto per <PC>)","" ).strip()
 expire_date      = st.text_input("Data di Fine (gg-mm-aaaa)", expire_default).strip()
@@ -184,7 +200,8 @@ Richiedo la definizione di una casella come sottoindicato.
         st.markdown("Profilare su SM:")
         for sm in sm_lines:
             if sm.strip(): st.markdown(f"- {sm}")
-    st.markdown("Grazie  \nSaluti")
+    st.markdown("Grazie  \  
+Saluti")
 
 # Generazione CSV Utente + Computer
 if st.button("Genera CSV Somministrato"):
@@ -215,6 +232,7 @@ if st.button("Genera CSV Somministrato"):
         description or "", "", f"{sAM}@consip.it", "", f"\"{mobile}\"", "",
         f"\"{cn}\"", "", "", ""
     ]
+
     # Preview messaggio
     st.markdown(f"""
 Ciao.  
@@ -222,9 +240,10 @@ Si richiede modifiche come da file:
 - {basename}_computer.csv  (oggetti di tipo computer)  
 - {basename}_utente.csv  (oggetti di tipo utenze)  
 Archiviati al percorso:  
-\\\\\\\srv_dati.consip.tesoro.it\AreaCondivisa\DEPSI\IC\AD_Modifiche  
+\\\\srv_dati.consip.tesoro.it\AreaCondivisa\DEPSI\IC\AD_Modifiche  
 Grazie
-""")
+"""
+    )
     # Anteprime
     st.subheader("Anteprima CSV Utente")
     st.dataframe(pd.DataFrame([row_user], columns=HEADER_USER))
@@ -255,4 +274,3 @@ Grazie
         mime="text/csv"
     )
     st.success(f"✅ CSV generati per '{sAM}'")
-
