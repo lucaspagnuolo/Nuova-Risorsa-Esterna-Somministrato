@@ -212,7 +212,16 @@ if st.button("Genera CSV Somministrato"):
         description or "", "", f"{sAM}@consip.it", "", f"\"{mobile}\"", "",
         f"\"{cn}\"", "", "", ""
     ]
-
+    # Preview messaggio
+    st.markdown(f"""
+Ciao.  
+Si richiede modifiche come da file:  
+- {basename}_computer.csv  (oggetti di tipo computer)  
+- {basename}_utente.csv  (oggetti di tipo utenze)  
+Archiviati al percorso:  
+\\srv_dati.consip.tesoro.it\AreaCondivisa\DEPSI\IC\AD_Modifiche  
+Grazie
+""")
     # Anteprime
     st.subheader("Anteprima CSV Utente")
     st.dataframe(pd.DataFrame([row_user], columns=HEADER_USER))
