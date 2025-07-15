@@ -114,11 +114,10 @@ if not config_file:
 gruppi, defaults, managers = load_config_from_bytes(config_file.read())
 
 # Valori di default
- o365_groups        = [
+ o365_groups = [
     defaults.get("grp_o365_standard","O365 Utenti Standard"),
     defaults.get("grp_o365_teams","O365 Teams Premium"),
-    defaults.get("grp_o365_copilot","O365 Copilot Plus")
-]
+    defaults.get("grp_o365_copilot","O365 Copilot Plus")]
  grp_foorban        = defaults.get("grp_foorban","Foorban_Users")
  pillole            = defaults.get("pillole","Pillole formative Teams Premium")
  ou_value           = defaults.get("ou_default","Somministrati e Stage")
