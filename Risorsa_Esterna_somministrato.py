@@ -200,8 +200,7 @@ Richiedo la definizione di una casella come sottoindicato.
         st.markdown("Profilare su SM:")
         for sm in sm_lines:
             if sm.strip(): st.markdown(f"- {sm}")
-    st.markdown("Grazie  \  
-Saluti")
+    st.markdown("Grazie  \nSaluti")
 
 # Generazione CSV Utente + Computer
 if st.button("Genera CSV Somministrato"):
