@@ -49,6 +49,16 @@ def load_config_from_bytes(data: bytes):
 # ------------------------------------------------------------
 # Utility functions
 # ------------------------------------------------------------
+def auto_quote(fields, quotechar='"', predicate=lambda s: ' ' in s):
+    out = []
+    for f in fields:
+        s = str(f)
+        if predicate(s):
+            out.append(f'{quotechar}{s}{quotechar}')
+        else:
+            out.append(s)
+    return out
+    
 def normalize_name(s: str) -> str:
     """Rimuove spazi, apostrofi e accenti, restituisce in minuscolo."""
     nfkd = unicodedata.normalize('NFKD', s)
@@ -253,12 +263,16 @@ Grazie
     # Download
     buf_user = io.StringIO()
     w1 = csv.writer(buf_user, quoting=csv.QUOTE_NONE, escapechar="\\")
-    w1.writerow(HEADER_USER); w1.writerow(row_user)
+    quoted_row_user = auto_quote(row_user, quotechar='"', predicate=lambda s: ' ' in s)
+    w1.writerow(HEADER_USER)
+    w1.writerow(quoted_row_user)
     buf_user.seek(0)
 
     buf_comp = io.StringIO()
     w2 = csv.writer(buf_comp, quoting=csv.QUOTE_NONE, escapechar="\\")
-    w2.writerow(HEADER_COMP); w2.writerow(row_comp)
+    quoted_row_comp = auto_quote(row_comp, quotechar='"', predicate=lambda s: ' ' in s)
+    w2.writerow(HEADER_COMP)
+    w2.writerow(quoted_row_comp)
     buf_comp.seek(0)
 
     st.download_button(
