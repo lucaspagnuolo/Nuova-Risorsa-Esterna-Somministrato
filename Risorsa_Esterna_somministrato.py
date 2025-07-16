@@ -161,7 +161,7 @@ else:
     department = st.text_input("Sigla Divisione-Area", department_default).strip()
 
 numero_telefono  = st.text_input("Mobile","" ).replace(" ","")
-description      = st.text_input("PC (lascia vuoto per <PC>)","" ).strip()
+description      = st.text_input("PC (lascia vuoto per <PC>)","<PC>" ).strip()
 expire_date      = st.text_input("Data di Fine (gg-mm-aaaa)", expire_default).strip()
 profilazione_flag= st.checkbox("Deve essere profilato su qualche SM?")
 sm_lines         = st.text_area("SM su quali va profilato","" ).splitlines() if profilazione_flag else []
