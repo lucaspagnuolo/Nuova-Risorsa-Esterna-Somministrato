@@ -282,7 +282,7 @@ if st.button("Genera CSV Somministrato"):
     msg_computer = (
         "Salve.\n"
         "Si richiede modifiche come da file:\n"
-        f"\\srv_dati\AreaCondivisa\DEPSI\IC\PC\{basename}_computer.csv\n"
+        f"\\\\srv_dati\\AreaCondivisa\\DEPSI\\IC\\PC\\{basename}_computer.csv\n"
         "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
         "Saluti"
     )
@@ -290,7 +290,7 @@ if st.button("Genera CSV Somministrato"):
     msg_profilazione = (
         "Salve.\n"
         "Si richiede modifiche come da file:\n"
-        f"\\srv_dati\AreaCondivisa\DEPSI\IC\Profilazioni\{basename}_profilazione.csv\n"
+        f"\\\\srv_dati\\AreaCondivisa\\DEPSI\\IC\\Profilazioni\\{basename}_profilazione.csv\n"
         "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
         "Saluti"
     )
