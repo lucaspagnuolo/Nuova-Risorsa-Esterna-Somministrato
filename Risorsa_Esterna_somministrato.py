@@ -299,22 +299,18 @@ if st.button("Genera CSV Somministrato"):
     )
 
     # --- mostra a video i messaggi sintetici e le anteprime ---
-    st.markdown(f"""
-Ciao.  
-Si richiede modifiche come da file:  
-- {basename}_computer.csv  (oggetti di tipo computer)  
-- {basename}_utente.csv  (oggetti di tipo utenze)  
-- {basename}_profilazione.csv  (profilazione gruppi)  
-
-Archiviati al percorso:  
-{ARCHIVE_PATH}  
-Grazie
-""")
-
+    st.subheader(f"Nuova Utenza AD [{cognome} (esterno)]")
+    st.text(msg_utente)
     st.subheader("Anteprima CSV Utente")
     st.dataframe(pd.DataFrame([row_user], columns=HEADER_USER))
+
+    st.subheader(f"Modifica AD [{cognome} (esterno)]")
+    st.text(msg_computer)
     st.subheader("Anteprima CSV Computer")
     st.dataframe(pd.DataFrame([row_comp], columns=HEADER_COMP))
+
+    st.subheader(f"Modifica AD Profilazione [{cognome} (esterno)]")
+    st.text(msg_profilazione)
     st.subheader("Anteprima CSV Profilazione")
     st.dataframe(pd.DataFrame([profile_row], columns=HEADER_USER))
 
@@ -341,14 +337,6 @@ Grazie
     w3.writerow(HEADER_USER)
     w3.writerow(quoted_profile_row)
     buf_prof.seek(0)
-
-    # Mostro i messaggi personalizzati a video (preview)
-    st.subheader(f"Messaggio per Utenza ({cognome})")
-    st.text(msg_utente)
-    st.subheader("Messaggio per Computer")
-    st.text(msg_computer)
-    st.subheader("Messaggio per Profilazione")
-    st.text(msg_profilazione)
 
     # Pulsanti di download singoli
     st.download_button(
