@@ -121,9 +121,6 @@ HEADER_COMP = [
     "add_userprincipalname","remove_userprincipalname","disable","moveToOU"
 ]
 
-# Percorso archivio (usato nel testo ma non per scrivere sul filesystem)
-ARCHIVE_PATH = r"\\\\srv_dati.consip.tesoro.it\AreaCondivisa\DEPSI\IC\AD_Modifiche"
-
 # ------------------------------------------------------------
 # Streamlit App
 # ------------------------------------------------------------
@@ -277,7 +274,7 @@ if st.button("Genera CSV Somministrato"):
     msg_utente = (
         "Salve.\n"
         "Vi richiediamo la definizione della utenza nell’AD Consip come dettagliato nei file:\n"
-        f"{ARCHIVE_PATH}/{basename}_utente.csv\n"
+        f"\\srv_dati\AreaCondivisa\DEPSI\IC\Utenze\Esterni\{basename}_utente.csv\n"
         "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
         "Saluti"
     )
@@ -285,7 +282,7 @@ if st.button("Genera CSV Somministrato"):
     msg_computer = (
         "Salve.\n"
         "Si richiede modifiche come da file:\n"
-        f"{ARCHIVE_PATH}/{basename}_computer.csv\n"
+        f"\\srv_dati\AreaCondivisa\DEPSI\IC\PC\{basename}_computer.csv\n"
         "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
         "Saluti"
     )
@@ -293,7 +290,7 @@ if st.button("Genera CSV Somministrato"):
     msg_profilazione = (
         "Salve.\n"
         "Si richiede modifiche come da file:\n"
-        f"{ARCHIVE_PATH}/{basename}_profilazione.csv\n"
+        f"\\srv_dati\AreaCondivisa\DEPSI\IC\Profilazioni\{basename}_profilazione.csv\n"
         "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
         "Saluti"
     )
