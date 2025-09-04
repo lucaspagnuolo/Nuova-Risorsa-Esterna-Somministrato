@@ -230,12 +230,12 @@ if st.button("Genera CSV Somministrato"):
     name_parts = [cognome] + ([secondo_cognome] if secondo_cognome else []) + [nome[:1]]
     basename = "_".join(name_parts)
 
-    # Righe CSV Utente (come prima)
+    # Righe CSV Utente: InserimentoGruppo lasciato volutamente vuoto come richiesto
     row_user = [
         sAM, "SI", ou_value, cn, cn, cn, given, surn,
         codice_fiscale, employee_id, department, description or "<PC>",
         "No", exp_fmt, upn, upn, mobile,
-        "", inserimento_gruppo, "", "", telephone_number, company
+        "", "", "", "", telephone_number, company
     ]
     row_comp = [
         description or "", "", f"{sAM}@consip.it", "", f"\"{mobile}\"", "",
@@ -244,17 +244,14 @@ if st.button("Genera CSV Somministrato"):
 
     # Profilazione: costruisco lista gruppi unendo o365_groups e inserimento_gruppo (filtrando vuoti)
     profile_groups_list = []
-    # o365_groups potrebbe contenere default strings; filtrare eventuali None/empty
     for g in o365_groups:
         if g and str(g).strip():
             profile_groups_list.append(str(g).strip())
     if inserimento_gruppo and str(inserimento_gruppo).strip():
         profile_groups_list.append(str(inserimento_gruppo).strip())
-    # Unisco con separatore desiderato (qui uso "; " per chiarezza)
     profile_groups = "; ".join(profile_groups_list)
 
     # Costruisco riga Profilazione con stesso header di HEADER_USER, ma valorizzando solo sAMAccountName e InserimentoGruppo
-    # Indice InserimentoGruppo in HEADER_USER è 18 (0-based)
     profile_row = [""] * len(HEADER_USER)
     profile_row[0] = sAM
     profile_row[18] = profile_groups
