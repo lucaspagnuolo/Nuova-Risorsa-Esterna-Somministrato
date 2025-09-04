@@ -373,7 +373,7 @@ Grazie
     # -------------------------------------------
     # Preparo l'anteprima template in formato Markdown (da inserire SOLO nello ZIP)
     # -------------------------------------------
-    table_md = f(
+    table_md = (
         "| Campo             | Valore                                     |\n"
         "|-------------------|--------------------------------------------|\n"
         f"| Tipo Utenza       | Remota                                     |\n"
