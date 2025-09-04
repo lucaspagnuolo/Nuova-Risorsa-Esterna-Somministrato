@@ -157,7 +157,7 @@ ou_value           = defaults.get("ou_default","Somministrati e Stage")
 expire_default     = defaults.get("expire_default","30-06-2025")
 department_default = defaults.get("department_default","")
 telephone_default  = defaults.get("telephone_interna","")
-company            = defaults.get("company_interna","")
+company            = defaults.get("company_interna",")
 
 # Modulo di input
 st.subheader("Modulo Inserimento Risorsa Esterna: Somministrato/Stage")
@@ -283,9 +283,9 @@ if st.button("Genera CSV Somministrato"):
     # --- Messaggi personalizzati per utente, computer e profilazione ---
     msg_utente = (
         "Salve.\n"
-        "Vi richiediamo la definizione della utenza nell’AD Consip come dettagliato nei file:\n"
+        "Vi richiediamo la definizione della utenza nell\u2019AD Consip come dettagliato nei file:\n"
         f"\\\\srv_dati\\AreaCondivisa\\DEPSI\\IC\\Utenze\\Esterni\\{basename}_utente.csv\n"
-        "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
+        "Restiamo in attesa di un vostro riscontro ad attivit\u00e0 completata.\n"
         "Saluti"
     )
 
@@ -293,7 +293,7 @@ if st.button("Genera CSV Somministrato"):
         "Salve.\n"
         "Si richiede modifiche come da file:\n"
         f"\\\\srv_dati\\AreaCondivisa\\DEPSI\\IC\\PC\\{basename}_computer.csv\n"
-        "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
+        "Restiamo in attesa di un vostro riscontro ad attivit\u00e0 completata.\n"
         "Saluti"
     )
 
@@ -301,7 +301,7 @@ if st.button("Genera CSV Somministrato"):
         "Salve.\n"
         "Si richiede modifiche come da file:\n"
         f"\\\\srv_dati\\AreaCondivisa\\DEPSI\\IC\\Profilazioni\\{basename}_profilazione.csv\n"
-        "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
+        "Restiamo in attesa di un vostro riscontro ad attivit\u00e0 completata.\n"
         "Saluti"
     )
 
