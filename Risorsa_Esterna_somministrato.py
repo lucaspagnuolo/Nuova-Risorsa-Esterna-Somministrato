@@ -138,6 +138,7 @@ o365_groups = [
     defaults.get("grp_o365_teams","O365 Teams Premium"),
     defaults.get("grp_o365_copilot","O365 Copilot Plus")]
 grp_foorban        = defaults.get("grp_foorban","Foorban_Users")
+grp_salesforce     = defaults.get("grp_salesforce", "")  # <-- lettura grp_salesforce
 pillole            = defaults.get("pillole","Pillole formative Teams Premium")
 ou_value           = defaults.get("ou_default","Somministrati e Stage")
 expire_default     = defaults.get("expire_default","30-06-2025")
@@ -205,7 +206,7 @@ Richiedo la definizione di una casella come sottoindicato.
     st.markdown(table_md)
     st.markdown("** il campo \"Data fine\" deve essere inserito in \"Data Assunzione\" **")
     # NOTE: la sezione "Aggiungere utenza di dominio ai gruppi" è stata rimossa su richiesta.
-    st.markdown(f"Aggiungere utenza al:\n- gruppo Azure: {grp_foorban}\n- canale {pillole}")
+    st.markdown(f"Aggiungere utenza al gruppo Azure: \n- {grp_foorban}\n- {grp_salesforce}\n- canale {pillole}")
     if profilazione_flag:
         st.markdown("Profilare su SM:")
         for sm in sm_lines:
