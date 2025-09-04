@@ -157,7 +157,7 @@ ou_value           = defaults.get("ou_default","Somministrati e Stage")
 expire_default     = defaults.get("expire_default","30-06-2025")
 department_default = defaults.get("department_default","")
 telephone_default  = defaults.get("telephone_interna","")
-company            = defaults.get("company_interna",")
+company            = defaults.get("company_interna","")
 
 # Modulo di input
 st.subheader("Modulo Inserimento Risorsa Esterna: Somministrato/Stage")
