@@ -204,7 +204,7 @@ Richiedo la definizione di una casella come sottoindicato.
 """
     st.markdown(table_md)
     st.markdown("** il campo \"Data fine\" deve essere inserito in \"Data Assunzione\" **")
-    st.markdown("Aggiungere utenza di dominio ai gruppi:\n" + "\n".join(f"- {g}" for g in o365_groups))
+    # NOTE: la sezione "Aggiungere utenza di dominio ai gruppi" è stata rimossa su richiesta.
     st.markdown(f"Aggiungere utenza al:\n- gruppo Azure: {grp_foorban}\n- canale {pillole}")
     if profilazione_flag:
         st.markdown("Profilare su SM:")
@@ -212,7 +212,7 @@ Richiedo la definizione di una casella come sottoindicato.
             if sm.strip(): st.markdown(f"- {sm}")
     st.markdown("Grazie  \nSaluti")
 
-# Generazione CSV Utente + Computer
+# Generazione CSV Utente + Computer + Profilazione
 if st.button("Genera CSV Somministrato"):
     sAM    = genera_samaccountname(nome, cognome, secondo_nome, secondo_cognome, True)
     cn     = build_full_name(cognome, secondo_cognome, nome, secondo_nome, True)
@@ -230,7 +230,7 @@ if st.button("Genera CSV Somministrato"):
     name_parts = [cognome] + ([secondo_cognome] if secondo_cognome else []) + [nome[:1]]
     basename = "_".join(name_parts)
 
-    # Righe CSV
+    # Righe CSV Utente (come prima)
     row_user = [
         sAM, "SI", ou_value, cn, cn, cn, given, surn,
         codice_fiscale, employee_id, department, description or "<PC>",
@@ -242,12 +242,30 @@ if st.button("Genera CSV Somministrato"):
         f"\"{cn}\"", "", "", ""
     ]
 
+    # Profilazione: costruisco lista gruppi unendo o365_groups e inserimento_gruppo (filtrando vuoti)
+    profile_groups_list = []
+    # o365_groups potrebbe contenere default strings; filtrare eventuali None/empty
+    for g in o365_groups:
+        if g and str(g).strip():
+            profile_groups_list.append(str(g).strip())
+    if inserimento_gruppo and str(inserimento_gruppo).strip():
+        profile_groups_list.append(str(inserimento_gruppo).strip())
+    # Unisco con separatore desiderato (qui uso "; " per chiarezza)
+    profile_groups = "; ".join(profile_groups_list)
+
+    # Costruisco riga Profilazione con stesso header di HEADER_USER, ma valorizzando solo sAMAccountName e InserimentoGruppo
+    # Indice InserimentoGruppo in HEADER_USER è 18 (0-based)
+    profile_row = [""] * len(HEADER_USER)
+    profile_row[0] = sAM
+    profile_row[18] = profile_groups
+
     # Preview messaggio
     st.markdown(f"""
 Ciao.  
 Si richiede modifiche come da file:  
 - {basename}_computer.csv  (oggetti di tipo computer)  
 - {basename}_utente.csv  (oggetti di tipo utenze)  
+- {basename}_profilazione.csv  (profilazione gruppi)  
 
 Archiviati al percorso:  
 \\\\\\srv_dati.consip.tesoro.it\AreaCondivisa\DEPSI\IC\AD_Modifiche  
@@ -259,8 +277,10 @@ Grazie
     st.dataframe(pd.DataFrame([row_user], columns=HEADER_USER))
     st.subheader("Anteprima CSV Computer")
     st.dataframe(pd.DataFrame([row_comp], columns=HEADER_COMP))
+    st.subheader("Anteprima CSV Profilazione")
+    st.dataframe(pd.DataFrame([profile_row], columns=HEADER_USER))
 
-    # Download
+    # Download CSV Utente
     buf_user = io.StringIO()
     w1 = csv.writer(buf_user, quoting=csv.QUOTE_NONE, escapechar="\\")
     quoted_row_user = auto_quote(row_user, quotechar='"', predicate=lambda s: ' ' in s)
@@ -268,12 +288,21 @@ Grazie
     w1.writerow(quoted_row_user)
     buf_user.seek(0)
 
+    # Download CSV Computer
     buf_comp = io.StringIO()
     w2 = csv.writer(buf_comp, quoting=csv.QUOTE_NONE, escapechar="\\")
     quoted_row_comp = auto_quote(row_comp, quotechar='"', predicate=lambda s: ' ' in s)
     w2.writerow(HEADER_COMP)
     w2.writerow(quoted_row_comp)
     buf_comp.seek(0)
+
+    # Download CSV Profilazione
+    buf_prof = io.StringIO()
+    w3 = csv.writer(buf_prof, quoting=csv.QUOTE_NONE, escapechar="\\")
+    quoted_profile_row = auto_quote(profile_row, quotechar='"', predicate=lambda s: ' ' in s)
+    w3.writerow(HEADER_USER)
+    w3.writerow(quoted_profile_row)
+    buf_prof.seek(0)
 
     st.download_button(
         "📥 Scarica CSV Utente",
@@ -285,6 +314,12 @@ Grazie
         "📥 Scarica CSV Computer",
         data=buf_comp.getvalue(),
         file_name=f"{basename}_computer.csv",
+        mime="text/csv"
+    )
+    st.download_button(
+        "📥 Scarica CSV Profilazione",
+        data=buf_prof.getvalue(),
+        file_name=f"{basename}_profilazione.csv",
         mime="text/csv"
     )
     st.success(f"✅ CSV generati per '{sAM}'")
