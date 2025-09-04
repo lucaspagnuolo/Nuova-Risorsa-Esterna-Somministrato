@@ -121,6 +121,16 @@ HEADER_COMP = [
     "add_userprincipalname","remove_userprincipalname","disable","moveToOU"
 ]
 
+# helper per creare buffer CSV
+def make_csv_buffer(headers, row):
+    buf = io.StringIO()
+    w = csv.writer(buf, quoting=csv.QUOTE_NONE, escapechar="\\")
+    quoted = auto_quote(row, quotechar='"', predicate=lambda s: ' ' in s)
+    w.writerow(headers)
+    w.writerow(quoted)
+    buf.seek(0)
+    return buf
+
 # ------------------------------------------------------------
 # Streamlit App
 # ------------------------------------------------------------
@@ -147,7 +157,7 @@ ou_value           = defaults.get("ou_default","Somministrati e Stage")
 expire_default     = defaults.get("expire_default","30-06-2025")
 department_default = defaults.get("department_default","")
 telephone_default  = defaults.get("telephone_interna","")
-company            = defaults.get("company_interna","")
+company            = defaults.get("company_interna",")
 
 # Modulo di input
 st.subheader("Modulo Inserimento Risorsa Esterna: Somministrato/Stage")
@@ -273,9 +283,9 @@ if st.button("Genera CSV Somministrato"):
     # --- Messaggi personalizzati per utente, computer e profilazione ---
     msg_utente = (
         "Salve.\n"
-        "Vi richiediamo la definizione della utenza nell’AD Consip come dettagliato nei file:\n"
+        "Vi richiediamo la definizione della utenza nell\u2019AD Consip come dettagliato nei file:\n"
         f"\\\\srv_dati\\AreaCondivisa\\DEPSI\\IC\\Utenze\\Esterni\\{basename}_utente.csv\n"
-        "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
+        "Restiamo in attesa di un vostro riscontro ad attivit\u00e0 completata.\n"
         "Saluti"
     )
 
@@ -283,7 +293,7 @@ if st.button("Genera CSV Somministrato"):
         "Salve.\n"
         "Si richiede modifiche come da file:\n"
         f"\\\\srv_dati\\AreaCondivisa\\DEPSI\\IC\\PC\\{basename}_computer.csv\n"
-        "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
+        "Restiamo in attesa di un vostro riscontro ad attivit\u00e0 completata.\n"
         "Saluti"
     )
 
@@ -291,7 +301,7 @@ if st.button("Genera CSV Somministrato"):
         "Salve.\n"
         "Si richiede modifiche come da file:\n"
         f"\\\\srv_dati\\AreaCondivisa\\DEPSI\\IC\\Profilazioni\\{basename}_profilazione.csv\n"
-        "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
+        "Restiamo in attesa di un vostro riscontro ad attivit\u00e0 completata.\n"
         "Saluti"
     )
 
@@ -301,53 +311,36 @@ if st.button("Genera CSV Somministrato"):
     st.subheader("Anteprima CSV Utente")
     st.dataframe(pd.DataFrame([row_user], columns=HEADER_USER))
 
-    st.subheader(f"Modifica AD [{cognome} (esterno)]")
-    st.text(msg_computer)
-    st.subheader("Anteprima CSV Computer")
-    st.dataframe(pd.DataFrame([row_comp], columns=HEADER_COMP))
-
-    st.subheader(f"Modifica AD Profilazione [{cognome} (esterno)]")
-    st.text(msg_profilazione)
-    st.subheader("Anteprima CSV Profilazione")
-    st.dataframe(pd.DataFrame([profile_row], columns=HEADER_USER))
-
-    # Download CSV Utente
-    buf_user = io.StringIO()
-    w1 = csv.writer(buf_user, quoting=csv.QUOTE_NONE, escapechar="\\")
-    quoted_row_user = auto_quote(row_user, quotechar='"', predicate=lambda s: ' ' in s)
-    w1.writerow(HEADER_USER)
-    w1.writerow(quoted_row_user)
-    buf_user.seek(0)
-
-    # Download CSV Computer
-    buf_comp = io.StringIO()
-    w2 = csv.writer(buf_comp, quoting=csv.QUOTE_NONE, escapechar="\\")
-    quoted_row_comp = auto_quote(row_comp, quotechar='"', predicate=lambda s: ' ' in s)
-    w2.writerow(HEADER_COMP)
-    w2.writerow(quoted_row_comp)
-    buf_comp.seek(0)
-
-    # Download CSV Profilazione
-    buf_prof = io.StringIO()
-    w3 = csv.writer(buf_prof, quoting=csv.QUOTE_NONE, escapechar="\\")
-    quoted_profile_row = auto_quote(profile_row, quotechar='"', predicate=lambda s: ' ' in s)
-    w3.writerow(HEADER_USER)
-    w3.writerow(quoted_profile_row)
-    buf_prof.seek(0)
-
-    # Pulsanti di download singoli
+    # Download CSV Utente (sotto l'anteprima utente)
+    buf_user = make_csv_buffer(HEADER_USER, row_user)
     st.download_button(
         "📥 Scarica CSV Utente",
         data=buf_user.getvalue(),
         file_name=f"{basename}_utente.csv",
         mime="text/csv"
     )
+
+    st.subheader(f"Modifica AD [{cognome} (esterno)]")
+    st.text(msg_computer)
+    st.subheader("Anteprima CSV Computer")
+    st.dataframe(pd.DataFrame([row_comp], columns=HEADER_COMP))
+
+    # Download CSV Computer (sotto l'anteprima computer)
+    buf_comp = make_csv_buffer(HEADER_COMP, row_comp)
     st.download_button(
         "📥 Scarica CSV Computer",
         data=buf_comp.getvalue(),
         file_name=f"{basename}_computer.csv",
         mime="text/csv"
     )
+
+    st.subheader(f"Modifica AD Profilazione [{cognome} (esterno)]")
+    st.text(msg_profilazione)
+    st.subheader("Anteprima CSV Profilazione")
+    st.dataframe(pd.DataFrame([profile_row], columns=HEADER_USER))
+
+    # Download CSV Profilazione (sotto l'anteprima profilazione)
+    buf_prof = make_csv_buffer(HEADER_USER, profile_row)
     st.download_button(
         "📥 Scarica CSV Profilazione",
         data=buf_prof.getvalue(),
