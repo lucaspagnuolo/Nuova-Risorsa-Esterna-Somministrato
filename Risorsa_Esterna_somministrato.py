@@ -243,13 +243,22 @@ if st.button("Genera CSV Somministrato"):
     ]
 
     # Profilazione: costruisco lista gruppi unendo o365_groups e inserimento_gruppo (filtrando vuoti)
+    # Profilazione: costruisco lista gruppi unendo o365_groups e inserimento_gruppo (filtrando vuoti)
     profile_groups_list = []
     for g in o365_groups:
         if g and str(g).strip():
-            profile_groups_list.append(str(g).strip())
+            token = str(g).strip()
+            # Piccola correzione automatica: se per errore manca la "O" iniziale (es. "365 Utenti Standard")
+            if token.startswith("365 "):
+                token = "O" + token
+            profile_groups_list.append(token)
     if inserimento_gruppo and str(inserimento_gruppo).strip():
-        profile_groups_list.append(str(inserimento_gruppo).strip())
-    profile_groups = "; ".join(profile_groups_list)
+        ig = str(inserimento_gruppo).strip()
+        # rimuovo eventuali spazi esterni e aggiungo così com'è
+        profile_groups_list.append(ig)
+
+    # Join senza spazi dopo il punto e virgola (produrra: "A;B;C;d;...")
+    profile_groups = ";".join(profile_groups_list)
 
     # Costruisco riga Profilazione con stesso header di HEADER_USER, ma valorizzando solo sAMAccountName e InserimentoGruppo
     profile_row = [""] * len(HEADER_USER)
