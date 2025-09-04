@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import io
 import unicodedata
+import zipfile
 
 # ------------------------------------------------------------
 # Caricamento configurazione da Excel caricato dall'utente
@@ -59,11 +60,13 @@ def auto_quote(fields, quotechar='"', predicate=lambda s: ' ' in s):
             out.append(s)
     return out
     
+
 def normalize_name(s: str) -> str:
     """Rimuove spazi, apostrofi e accenti, restituisce in minuscolo."""
     nfkd = unicodedata.normalize('NFKD', s)
     ascii_str = nfkd.encode('ASCII', 'ignore').decode()
     return ascii_str.replace(' ', '').replace("'", '').lower()
+
 
 def formatta_data(data: str) -> str:
     for sep in ["-", "/"]:
@@ -117,6 +120,9 @@ HEADER_COMP = [
     "Computer","OU","add_mail","remove_mail","add_mobile","remove_mobile",
     "add_userprincipalname","remove_userprincipalname","disable","moveToOU"
 ]
+
+# Percorso archivio (usato nel testo ma non per scrivere sul filesystem)
+ARCHIVE_PATH = r"\\\\srv_dati.consip.tesoro.it\AreaCondivisa\DEPSI\IC\AD_Modifiche"
 
 # ------------------------------------------------------------
 # Streamlit App
@@ -205,7 +211,6 @@ Richiedo la definizione di una casella come sottoindicato.
 """
     st.markdown(table_md)
     st.markdown("** il campo \"Data fine\" deve essere inserito in \"Data Assunzione\" **")
-    # NOTE: la sezione "Aggiungere utenza di dominio ai gruppi" è stata rimossa su richiesta.
     st.markdown(f"Aggiungere utenza al gruppo Azure: \n- {grp_foorban}\n- {grp_salesforce}\n- canale {pillole}")
     if profilazione_flag:
         st.markdown("Profilare su SM:")
@@ -223,7 +228,7 @@ if st.button("Genera CSV Somministrato"):
     given  = f"{nome} {secondo_nome}".strip()
     surn   = f"{cognome} {secondo_cognome}".strip()
 
-    # Costruisci basename normalizzato
+    # Costruisci basename normalizzato (visibile nei file)
     norm_cognome = normalize_name(cognome)
     norm_secondo = normalize_name(secondo_cognome) if secondo_cognome else ''
     name_parts = [norm_cognome] + ([norm_secondo] if norm_secondo else []) + [nome[:1].lower()]
@@ -239,11 +244,10 @@ if st.button("Genera CSV Somministrato"):
         "", "", "", "", telephone_number, company
     ]
     row_comp = [
-        description or "", "", f"{sAM}@consip.it", "", f"\"{mobile}\"", "",
-        f"\"{cn}\"", "", "", ""
+        description or "", "", f"{sAM}@consip.it", "", f'"{mobile}"', "",
+        f'"{cn}"', "", "", ""
     ]
 
-    # Profilazione: costruisco lista gruppi unendo o365_groups e inserimento_gruppo (filtrando vuoti)
     # Profilazione: costruisco lista gruppi unendo o365_groups e inserimento_gruppo (filtrando vuoti)
     profile_groups_list = []
     for g in o365_groups:
@@ -255,7 +259,6 @@ if st.button("Genera CSV Somministrato"):
             profile_groups_list.append(token)
     if inserimento_gruppo and str(inserimento_gruppo).strip():
         ig = str(inserimento_gruppo).strip()
-        # rimuovo eventuali spazi esterni e aggiungo così com'è
         profile_groups_list.append(ig)
 
     # Join senza spazi dopo il punto e virgola (produrra: "A;B;C;d;...")
@@ -264,9 +267,38 @@ if st.button("Genera CSV Somministrato"):
     # Costruisco riga Profilazione con stesso header di HEADER_USER, ma valorizzando solo sAMAccountName e InserimentoGruppo
     profile_row = [""] * len(HEADER_USER)
     profile_row[0] = sAM
-    profile_row[18] = profile_groups
+    try:
+        idx_inserimento = HEADER_USER.index("InserimentoGruppo")
+    except ValueError:
+        idx_inserimento = 18
+    profile_row[idx_inserimento] = profile_groups
 
-    # Preview messaggio
+    # --- Messaggi personalizzati per utente, computer e profilazione ---
+    msg_utente = (
+        "Salve.\n"
+        "Vi richiediamo la definizione della utenza nell’AD Consip come dettagliato nei file:\n"
+        f"{ARCHIVE_PATH}/{basename}_utente.csv\n"
+        "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
+        "Saluti"
+    )
+
+    msg_computer = (
+        "Salve.\n"
+        "Si richiede modifiche come da file:\n"
+        f"{ARCHIVE_PATH}/{basename}_computer.csv\n"
+        "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
+        "Saluti"
+    )
+
+    msg_profilazione = (
+        "Salve.\n"
+        "Si richiede modifiche come da file:\n"
+        f"{ARCHIVE_PATH}/{basename}_profilazione.csv\n"
+        "Restiamo in attesa di un vostro riscontro ad attività completata.\n"
+        "Saluti"
+    )
+
+    # --- mostra a video i messaggi sintetici e le anteprime ---
     st.markdown(f"""
 Ciao.  
 Si richiede modifiche come da file:  
@@ -275,11 +307,10 @@ Si richiede modifiche come da file:
 - {basename}_profilazione.csv  (profilazione gruppi)  
 
 Archiviati al percorso:  
-\\\\\\srv_dati.consip.tesoro.it\AreaCondivisa\DEPSI\IC\AD_Modifiche  
+{ARCHIVE_PATH}  
 Grazie
-"""
-    )
-    # Anteprime
+""")
+
     st.subheader("Anteprima CSV Utente")
     st.dataframe(pd.DataFrame([row_user], columns=HEADER_USER))
     st.subheader("Anteprima CSV Computer")
@@ -311,6 +342,15 @@ Grazie
     w3.writerow(quoted_profile_row)
     buf_prof.seek(0)
 
+    # Mostro i messaggi personalizzati a video (preview)
+    st.subheader(f"Messaggio per Utenza ({cognome})")
+    st.text(msg_utente)
+    st.subheader("Messaggio per Computer")
+    st.text(msg_computer)
+    st.subheader("Messaggio per Profilazione")
+    st.text(msg_profilazione)
+
+    # Pulsanti di download singoli
     st.download_button(
         "📥 Scarica CSV Utente",
         data=buf_user.getvalue(),
@@ -329,4 +369,69 @@ Grazie
         file_name=f"{basename}_profilazione.csv",
         mime="text/csv"
     )
+
+    # -------------------------------------------
+    # Preparo l'anteprima template in formato Markdown (da inserire SOLO nello ZIP)
+    # -------------------------------------------
+    table_md = f(
+        "| Campo             | Valore                                     |\n"
+        "|-------------------|--------------------------------------------|\n"
+        f"| Tipo Utenza       | Remota                                     |\n"
+        f"| Utenza            | {sAM}                                       |\n"
+        f"| Alias             | {sAM}                                       |\n"
+        f"| Display name      | {cn}                                        |\n"
+        f"| Common name       | {cn}                                        |\n"
+        f"| e-mail            | {upn}                                       |\n"
+        f"| e-mail secondaria | {upn}                                       |\n"
+    )
+
+    template_preview_lines = []
+    template_preview_lines.append("Richiesta definizione casella - anteprima template\n")
+    template_preview_lines.append(table_md)
+    if profile_groups_list:
+        template_preview_lines.append(f"\nIl giorno {expire_date} occorre inserire la casella nelle DL:\n")
+        for dl in profile_groups_list:
+            template_preview_lines.append(f"- {dl}\n")
+    if profilazione_flag:
+        template_preview_lines.append("\nProfilare su SM:\n")
+        for sm in sm_lines:
+            template_preview_lines.append(f"- {sm}\n")
+
+    if grp_foorban:
+        template_preview_lines.append(f"\nAggiungere utenza al gruppo Azure:\n- {grp_foorban}\n")
+    if grp_salesforce:
+        template_preview_lines.append(f"- {grp_salesforce}\n")
+    if pillole:
+        template_preview_lines.append(f"- canale {pillole}\n")
+
+    # unisco tutto in una stringa markdown
+    template_preview_md = "\n".join(template_preview_lines)
+
+    # -------------------------------------------
+    # Creo lo ZIP con i 3 CSV + file di anteprima template + 3 messaggi .txt
+    # (i file "msg_*.txt" e "template_preview.md" saranno presenti SOLO nello ZIP)
+    # -------------------------------------------
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zipf:
+        # CSV
+        zipf.writestr(f"{basename}_utente.csv", buf_user.getvalue())
+        zipf.writestr(f"{basename}_computer.csv", buf_comp.getvalue())
+        zipf.writestr(f"{basename}_profilazione.csv", buf_prof.getvalue())
+        # anteprima template (markdown)
+        zipf.writestr(f"{basename}_template_preview.md", template_preview_md)
+        # messaggi (solo testo)
+        zipf.writestr(f"{basename}_msg_utente.txt", msg_utente)
+        zipf.writestr(f"{basename}_msg_computer.txt", msg_computer)
+        zipf.writestr(f"{basename}_msg_profilazione.txt", msg_profilazione)
+
+    zip_buffer.seek(0)
+
+    # pulsante per scaricare l'unico ZIP (contenente anche template + messaggi)
+    st.download_button(
+        "📦 Scarica Tutti i CSV (ZIP) + anteprima e messaggi",
+        data=zip_buffer.getvalue(),
+        file_name=f"{basename}_csv_bundle.zip",
+        mime="application/zip"
+    )
+
     st.success(f"✅ CSV generati per '{sAM}'")
